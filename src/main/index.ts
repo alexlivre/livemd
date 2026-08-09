@@ -3,12 +3,14 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import chokidar, { type FSWatcher } from 'chokidar';
+import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const watched = new Map<string, FSWatcher>();
 let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
+let currentLang: AppLanguage = mapOsLocale(app.getLocale());
 
 const SUPPORTED_EXTS = /\.(md|markdown|mdown|mkd|mdx)$/i;
 
@@ -55,7 +57,7 @@ function extractMarkdownFromArgs(argv: string[]): string | null {
 
 async function readMarkdownFile(filePath: string) {
   const stat = await fs.stat(filePath);
-  if (!stat.isFile()) throw new Error('Não é um arquivo');
+  if (!stat.isFile()) throw new Error(t(currentLang, 'notAFile'));
   const content = await fs.readFile(filePath, 'utf-8');
   return { content, modifiedAt: stat.mtimeMs };
 }
@@ -133,11 +135,11 @@ function deliverOpenPath(filePath: string): void {
 function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('file:open-dialog', async () => {
     const result = await dialog.showOpenDialog(win, {
-      title: 'Abrir Markdown',
+      title: t(currentLang, 'openDialogTitle'),
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'] },
-        { name: 'Todos os arquivos', extensions: ['*'] }
+        { name: t(currentLang, 'filterMarkdown'), extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'] },
+        { name: t(currentLang, 'filterAll'), extensions: ['*'] }
       ]
     });
 
@@ -157,7 +159,7 @@ function registerIpc(win: BrowserWindow): void {
         watchFile(filePath, win);
       } catch (err) {
         dialog.showErrorBox(
-          'Erro ao abrir',
+          t(currentLang, 'errorOpening'),
           `${filePath}\n${err instanceof Error ? err.message : String(err)}`
         );
       }
@@ -166,7 +168,7 @@ function registerIpc(win: BrowserWindow): void {
   });
 
   ipcMain.handle('file:read', async (_evt, filePath: string) => {
-    if (!isMarkdown(filePath)) throw new Error('Apenas arquivos Markdown');
+    if (!isMarkdown(filePath)) throw new Error(t(currentLang, 'markdownOnly'));
     const { content, modifiedAt } = await readMarkdownFile(filePath);
     watchFile(filePath, win);
     return {
@@ -189,6 +191,14 @@ function registerIpc(win: BrowserWindow): void {
     const p = pendingOpenPath;
     pendingOpenPath = null;
     return p;
+  });
+
+  ipcMain.handle('app:get-locale', () => app.getLocale());
+
+  ipcMain.handle('app:set-language', (_evt, lang: unknown) => {
+    if (lang === 'pt' || lang === 'en' || lang === 'es') {
+      currentLang = lang;
+    }
   });
 }
 

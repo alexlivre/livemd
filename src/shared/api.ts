@@ -1,3 +1,5 @@
+import type { AppLanguage } from './i18n';
+
 export interface OpenedFile {
   filePath: string;
   fileName: string;
@@ -11,6 +13,8 @@ export interface MdApi {
   closeTab: (filePath: string) => Promise<void>;
   revealInFolder: (filePath: string) => Promise<void>;
   consumePendingPath: () => Promise<string | null>;
+  getOsLocale: () => Promise<string>;
+  setLanguage: (lang: AppLanguage) => Promise<void>;
   onOpenPath: (handler: (filePath: string) => void) => () => void;
   onFileEvent: (handler: (event: import('./types').FileEvent) => void) => () => void;
   getPathForFile: (file: File) => string;
