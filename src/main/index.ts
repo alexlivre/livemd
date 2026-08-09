@@ -16,6 +16,24 @@ function isMarkdown(filePath: string): boolean {
   return SUPPORTED_EXTS.test(filePath);
 }
 
+// Converts a file:// URL (as produced by a browser-initiated navigation to a
+// dropped file) into an OS path, e.g. file:///C:/a%20b/x.md -> C:/a b/x.md.
+function filePathFromFileUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'file:') return null;
+    let filePath = decodeURIComponent(parsed.pathname);
+    if (/^[a-z]$/i.test(parsed.hostname)) {
+      filePath = `${parsed.hostname}:${filePath}`;
+    } else {
+      filePath = filePath.replace(/^\/([A-Za-z]:)/, '$1');
+    }
+    return filePath || null;
+  } catch {
+    return null;
+  }
+}
+
 function extractMarkdownFromArgs(argv: string[]): string | null {
   // Skip the executable; look for the first arg ending with a Markdown extension.
   // Exclude flags (starting with "-") and the "." used in dev.
@@ -196,12 +214,16 @@ async function createWindow(): Promise<void> {
   mainWindow.setMenuBarVisibility(false);
   Menu.setApplicationMenu(null);
 
-  // Prevent the renderer from navigating to any file (e.g. an .md dropped
-  // onto the window when dragover's preventDefault didn't fire). When the
-  // drag-drop handlers in the renderer work as intended this is a no-op.
+  // When a file is dropped and the renderer's drag handlers don't take it
+  // (e.g. the drop is rejected on file:// pages), Chromium attempts to
+  // navigate to the file. Block the navigation and open the file instead.
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (!url.startsWith('file://')) return;
     event.preventDefault();
+    const filePath = filePathFromFileUrl(url);
+    if (filePath && isMarkdown(filePath)) {
+      deliverOpenPath(filePath);
+    }
   });
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));

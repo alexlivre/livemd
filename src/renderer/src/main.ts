@@ -198,22 +198,67 @@ async function consumePending(): Promise<void> {
 // ---- Drag & drop ----
 const MARKDOWN_EXT = /\.(md|markdown|mdown|mkd|mdx)$/i;
 
-function isMarkdownDrag(dt: DataTransfer | null): boolean {
+// On file:// pages (packaged builds) the DataTransfer stays in protected mode
+// during dragenter/dragover: item kinds are enumerable, but getAsFile()
+// returns null and files is empty. Only inspect kinds here so the drop is
+// never rejected; extension filtering happens in the drop handler.
+function hasDraggedFiles(dt: DataTransfer | null): boolean {
   if (!dt) return false;
   if (dt.items && dt.items.length > 0) {
+    for (let i = 0; i < dt.items.length; i++) {
+      if (dt.items[i].kind === 'file') return true;
+    }
+    return false;
+  }
+  return dt.files.length > 0;
+}
+
+function collectDroppedFiles(dt: DataTransfer | null): File[] {
+  const files: File[] = [];
+  if (!dt) return files;
+  if (dt.files.length > 0) {
+    for (let i = 0; i < dt.files.length; i++) files.push(dt.files[i]);
+    return files;
+  }
+  if (dt.items) {
     for (let i = 0; i < dt.items.length; i++) {
       const item = dt.items[i];
       if (item.kind !== 'file') continue;
       const f = item.getAsFile();
-      if (f && MARKDOWN_EXT.test(f.name)) return true;
+      if (f) files.push(f);
     }
+  }
+  return files;
+}
+
+async function openDroppedFile(f: File): Promise<boolean> {
+  try {
+    const path = api.getPathForFile(f);
+    if (path) {
+      await openPath(path);
+      return true;
+    }
+  } catch (err) {
+    setStatus(`Erro no drop: ${errorMessage(err)}`, 'err');
     return false;
   }
-  const files = dt.files;
-  for (let i = 0; i < files.length; i++) {
-    if (MARKDOWN_EXT.test(files[i].name)) return true;
+
+  // No real path available — read the content directly and open a tab
+  // without file watching.
+  try {
+    const content = await f.text();
+    manager.add({
+      filePath: `drop://${f.name}`,
+      fileName: f.name,
+      content,
+      modifiedAt: Date.now()
+    });
+    setStatus(`Aberto sem monitoramento: ${f.name}`, 'warn');
+    return true;
+  } catch (err) {
+    setStatus(`Erro ao ler o arquivo solto: ${errorMessage(err)}`, 'err');
+    return false;
   }
-  return false;
 }
 
 function bindDragAndDrop(): void {
@@ -229,7 +274,7 @@ function bindDragAndDrop(): void {
       // prevents Electron from navigating to the dropped file.
       evt.preventDefault();
       depth++;
-      if (isMarkdownDrag(dt)) {
+      if (hasDraggedFiles(dt)) {
         dropOverlay.classList.add('is-visible');
       }
     },
@@ -243,7 +288,7 @@ function bindDragAndDrop(): void {
       // browser doesn't reject the drop.
       evt.preventDefault();
       if (evt.dataTransfer) {
-        evt.dataTransfer.dropEffect = isMarkdownDrag(evt.dataTransfer) ? 'copy' : 'none';
+        evt.dataTransfer.dropEffect = hasDraggedFiles(evt.dataTransfer) ? 'copy' : 'none';
       }
     },
     { capture: true }
@@ -265,30 +310,29 @@ function bindDragAndDrop(): void {
       depth = 0;
       dropOverlay.classList.remove('is-visible');
 
-      const files = evt.dataTransfer?.files;
-      if (!files || files.length === 0) return;
-
-      const paths: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-        if (!MARKDOWN_EXT.test(f.name)) continue;
-        try {
-          const path = api.getPathForFile(f);
-          if (path) paths.push(path);
-        } catch (err) {
-          setStatus(`Erro no drop: ${errorMessage(err)}`, 'err');
+      try {
+        const files = collectDroppedFiles(evt.dataTransfer);
+        if (files.length === 0) {
+          setStatus('Nenhum arquivo no drop', 'warn');
+          return;
         }
-      }
 
-      if (paths.length === 0) {
-        setStatus('Nenhum arquivo Markdown no drop', 'warn');
-        return;
-      }
+        const markdownFiles = files.filter((f) => MARKDOWN_EXT.test(f.name));
+        if (markdownFiles.length === 0) {
+          setStatus('Nenhum arquivo Markdown no drop', 'warn');
+          return;
+        }
 
-      for (const p of paths) {
-        await openPath(p);
+        let opened = 0;
+        for (const f of markdownFiles) {
+          if (await openDroppedFile(f)) opened++;
+        }
+        if (opened === markdownFiles.length) {
+          setStatus(`${opened} arquivo(s) aberto(s) via drop`, 'ok');
+        }
+      } catch (err) {
+        setStatus(`Erro no drop: ${errorMessage(err)}`, 'err');
       }
-      setStatus(`${paths.length} arquivo(s) aberto(s) via drop`, 'ok');
     },
     { capture: true }
   );
