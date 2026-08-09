@@ -48,7 +48,16 @@ const enMessages = {
   filterAll: 'All files',
   errorOpening: 'Error opening',
   notAFile: 'Not a file',
-  markdownOnly: 'Markdown files only'
+  markdownOnly: 'Markdown files only',
+  aboutTooltip: 'About LiveMD',
+  aboutTitle: 'About',
+  aboutVersion: 'Version {v}',
+  aboutDesc: 'A fast, local Markdown reader with live reload, tabs and syntax highlighting.',
+  aboutAuthor: 'Author',
+  aboutLicense: 'License',
+  aboutRepo: 'Repository',
+  aboutStack: 'Built with Electron + TypeScript',
+  aboutClose: 'Close'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -99,7 +108,16 @@ const ptMessages: Record<MsgKey, string> = {
   filterAll: 'Todos os arquivos',
   errorOpening: 'Erro ao abrir',
   notAFile: 'Não é um arquivo',
-  markdownOnly: 'Apenas arquivos Markdown'
+  markdownOnly: 'Apenas arquivos Markdown',
+  aboutTooltip: 'Sobre o LiveMD',
+  aboutTitle: 'Sobre',
+  aboutVersion: 'Versão {v}',
+  aboutDesc: 'Leitor de Markdown rápido e local, com reload automático, abas e destaque de sintaxe.',
+  aboutAuthor: 'Autor',
+  aboutLicense: 'Licença',
+  aboutRepo: 'Repositório',
+  aboutStack: 'Feito com Electron + TypeScript',
+  aboutClose: 'Fechar'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -148,7 +166,16 @@ const esMessages: Record<MsgKey, string> = {
   filterAll: 'Todos los archivos',
   errorOpening: 'Error al abrir',
   notAFile: 'No es un archivo',
-  markdownOnly: 'Solo archivos Markdown'
+  markdownOnly: 'Solo archivos Markdown',
+  aboutTooltip: 'Acerca de LiveMD',
+  aboutTitle: 'Acerca de',
+  aboutVersion: 'Versión {v}',
+  aboutDesc: 'Lector de Markdown rápido y local, con recarga automática, pestañas y resaltado de sintaxis.',
+  aboutAuthor: 'Autor',
+  aboutLicense: 'Licencia',
+  aboutRepo: 'Repositorio',
+  aboutStack: 'Hecho con Electron + TypeScript',
+  aboutClose: 'Cerrar'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {
