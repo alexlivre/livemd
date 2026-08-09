@@ -1166,3 +1166,123 @@ body {
     background-color: transparent;
   }
 }
+/* ============================================================
+   About modal
+   ============================================================ */
+.about-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.about-backdrop[hidden] {
+  display: none;
+}
+
+.about-card {
+  position: relative;
+  width: min(420px, calc(100vw - 48px));
+  padding: 28px 28px 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.about-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.about-close:hover {
+  background: var(--bg-tab-hover);
+  color: var(--text);
+}
+
+.about-logo {
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.about-app-name {
+  margin: 0 0 2px;
+  font-size: 20px;
+}
+
+.about-version {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.about-desc {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.about-rows {
+  margin: 0 0 16px;
+  text-align: left;
+}
+
+.about-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.about-row:last-child {
+  border-bottom: none;
+}
+
+.about-row dt {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.about-row dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.about-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.about-link:hover {
+  text-decoration: underline;
+}
+
+.about-stack {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}

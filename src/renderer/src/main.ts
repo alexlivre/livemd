@@ -35,6 +35,14 @@ const btnRecent = document.getElementById('btn-recent') as HTMLButtonElement;
 const recentMenu = document.getElementById('recent-menu') as HTMLDivElement;
 const btnLang = document.getElementById('btn-lang') as HTMLButtonElement;
 const langMenu = document.getElementById('lang-menu') as HTMLDivElement;
+const btnAbout = document.getElementById('btn-about') as HTMLButtonElement;
+const aboutModal = document.getElementById('about-modal') as HTMLDivElement;
+const aboutCloseBtn = document.getElementById('about-close') as HTMLButtonElement;
+const aboutVersion = document.getElementById('about-version') as HTMLDivElement;
+const aboutDesc = document.getElementById('about-desc') as HTMLParagraphElement;
+const aboutRepoLink = document.getElementById('about-repo-link') as HTMLButtonElement;
+
+const REPO_URL = 'https://github.com/alexlivre/livemd';
 const fabOpen = document.getElementById('fab-open') as HTMLButtonElement;
 const dropOverlay = document.getElementById('drop-overlay') as HTMLDivElement;
 
@@ -58,6 +66,10 @@ function applyStaticStrings(): void {
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n-title]')) {
     const key = el.dataset.i18nTitle as MsgKey | undefined;
     if (key && key in MESSAGES.en) el.title = t(key);
+  }
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n-aria]')) {
+    const key = el.dataset.i18nAria as MsgKey | undefined;
+    if (key && key in MESSAGES.en) el.setAttribute('aria-label', t(key));
   }
 }
 
@@ -507,6 +519,26 @@ function toggleLangMenu(): void {
   }
 }
 
+async function openAbout(): Promise<void> {
+  const version = await api.getAppVersion();
+  aboutVersion.textContent = t('aboutVersion', { v: version });
+  aboutDesc.textContent = t('aboutDesc');
+  aboutModal.hidden = false;
+}
+
+function closeAbout(): void {
+  aboutModal.hidden = true;
+}
+
+function bindAbout(): void {
+  btnAbout.addEventListener('click', () => void openAbout());
+  aboutCloseBtn.addEventListener('click', closeAbout);
+  aboutRepoLink.addEventListener('click', () => void api.openExternal(REPO_URL));
+  aboutModal.addEventListener('click', (evt) => {
+    if (evt.target === aboutModal) closeAbout();
+  });
+}
+
 function bindLangMenu(): void {
   btnLang.addEventListener('click', (evt) => {
     evt.stopPropagation();
@@ -552,6 +584,7 @@ function bindUi(): void {
   bindCodeCopy();
   bindRecentMenu();
   bindLangMenu();
+  bindAbout();
 
   window.addEventListener('keydown', (evt) => {
     const isCtrl = evt.ctrlKey || evt.metaKey;
@@ -570,6 +603,7 @@ function bindUi(): void {
     } else if (evt.key === 'Escape') {
       closeRecentMenu();
       closeLangMenu();
+      closeAbout();
     }
   });
 
