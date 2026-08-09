@@ -27,7 +27,9 @@ export type IpcChannel =
   | 'file:removed'
   | 'tab:close'
   | 'app:get-locale'
-  | 'app:set-language';
+  | 'app:set-language'
+  | 'app:get-version'
+  | 'app:open-external';
 
 export type FileEvent =
   | { kind: 'changed'; filePath: string; content: string; modifiedAt: number }

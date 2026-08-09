@@ -11,6 +11,7 @@ const watched = new Map<string, FSWatcher>();
 let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
 let currentLang: AppLanguage = mapOsLocale(app.getLocale());
+const REPO_URL = 'https://github.com/alexlivre/livemd';
 
 const SUPPORTED_EXTS = /\.(md|markdown|mdown|mkd|mdx)$/i;
 
@@ -198,6 +199,14 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('app:set-language', (_evt, lang: unknown) => {
     if (lang === 'pt' || lang === 'en' || lang === 'es') {
       currentLang = lang;
+    }
+  });
+
+  ipcMain.handle('app:get-version', () => app.getVersion());
+
+  ipcMain.handle('app:open-external', async (_evt, url: unknown) => {
+    if (url === REPO_URL) {
+      await shell.openExternal(REPO_URL);
     }
   });
 }

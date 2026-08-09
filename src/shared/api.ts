@@ -15,6 +15,8 @@ export interface MdApi {
   consumePendingPath: () => Promise<string | null>;
   getOsLocale: () => Promise<string>;
   setLanguage: (lang: AppLanguage) => Promise<void>;
+  getAppVersion: () => Promise<string>;
+  openExternal: (url: string) => Promise<void>;
   onOpenPath: (handler: (filePath: string) => void) => () => void;
   onFileEvent: (handler: (event: import('./types').FileEvent) => void) => () => void;
   getPathForFile: (file: File) => string;
