@@ -58,6 +58,7 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **"Open with" integration** — file associations for `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`; single-instance lock focuses the running window and opens the file in a new tab
 - **Two themes** — `dark` and `soft` (default), toggled with `Ctrl+Shift+T` or the titlebar button; preference persisted per user
 - **Localized UI** — follows the OS language (pt-BR, en-US, es) with a manual override dropdown in the titlebar; unsupported OS locales fall back to English
+- **About dialog** — info button in the titlebar shows version, author, license and the repository link (opens in the browser)
 - **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, `contextIsolation` on, no remote content
 - **NSIS installer** — per-user install (no admin), custom page asking to set LiveMD as the default app for Markdown files
 - **Flat UI, no native menus** — the Electron menu bar is removed; every action is an in-window control with shortcuts shown in the status bar
