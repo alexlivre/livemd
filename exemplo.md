@@ -1,4 +1,4 @@
-# Markdown Reader — Exemplo
+# LiveMD — Exemplo
 
 Bem-vindo! Este arquivo serve como **exemplo** para testar o leitor.
 

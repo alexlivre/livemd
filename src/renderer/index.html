@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR" data-theme="soft">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,7 +7,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: file:; font-src 'self' data:;"
     />
-    <title>Markdown Reader</title>
+    <title>LiveMD</title>
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
@@ -22,18 +22,28 @@
             </svg>
           </div>
           <div class="app-titles">
-            <span class="app-title">Markdown Reader</span>
+            <span class="app-title">LiveMD</span>
             <span class="app-subtitle">Leitor com abas e auto-reload</span>
           </div>
         </div>
         <div class="titlebar-actions">
+          <div class="recent-wrap">
+            <button id="btn-recent" class="btn btn-ghost btn-icon" title="Arquivos recentes" aria-label="Arquivos recentes">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+            <div id="recent-menu" class="recent-menu" hidden></div>
+          </div>
           <button id="btn-theme" class="btn btn-ghost btn-icon" title="Alternar tema (Ctrl+Shift+T)" aria-label="Alternar tema">
-            <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-            </svg>
             <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
+            </svg>
+            <svg class="icon-soft" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+              <line x1="7" y1="12" x2="17" y2="12"/>
             </svg>
           </button>
         </div>

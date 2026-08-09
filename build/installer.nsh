@@ -1,4 +1,4 @@
-; Custom installer script for Markdown Reader
+; Custom installer script for LiveMD
 ; Adds a page asking the user if they want to register .md as default app.
 
 !include nsDialogs.nsh
@@ -22,11 +22,11 @@ Function setAsDefaultPageCreate
   Pop $0
   SetCtlColors $0 "" "ffffff"
 
-  ${NSD_CreateLabel} 0 24u 100% 20u "Markdown Reader pode ser definido como leitor padrão"
+  ${NSD_CreateLabel} 0 24u 100% 20u "LiveMD pode ser definido como leitor padrão"
   Pop $0
   SetCtlColors $0 "" "ffffff"
 
-  ${NSD_CreateLabel} 0 56u 100% 50u "Deseja definir o Markdown Reader como aplicativo padrão para abrir arquivos Markdown (.md, .markdown)?$\r$\nVocê poderá alterar isso depois nas configurações do Windows."
+  ${NSD_CreateLabel} 0 56u 100% 50u "Deseja definir o LiveMD como aplicativo padrão para abrir arquivos Markdown (.md, .markdown)?$\r$\nVocê poderá alterar isso depois nas configurações do Windows."
   Pop $0
 
   ${NSD_CreateCheckbox} 0 120u 100% 20u "Sim, tornar padrão para .md e .markdown"
@@ -44,14 +44,14 @@ FunctionEnd
 ; Register as default handler for .md
 !macro registerAsDefault UN
   ${If} $SetAsDefaultState == ${BST_CHECKED}
-    WriteRegStr HKCU "Software\Classes\.md" "" "MarkdownReader.mdfile"
-    WriteRegStr HKCU "Software\Classes\.markdown" "" "MarkdownReader.mdfile"
-    WriteRegStr HKCU "Software\Classes\.mdown" "" "MarkdownReader.mdfile"
-    WriteRegStr HKCU "Software\Classes\.mkd" "" "MarkdownReader.mdfile"
+    WriteRegStr HKCU "Software\Classes\.md" "" "LiveMD.mdfile"
+    WriteRegStr HKCU "Software\Classes\.markdown" "" "LiveMD.mdfile"
+    WriteRegStr HKCU "Software\Classes\.mdown" "" "LiveMD.mdfile"
+    WriteRegStr HKCU "Software\Classes\.mkd" "" "LiveMD.mdfile"
 
-    WriteRegStr HKCU "Software\Classes\MarkdownReader.mdfile" "" "Markdown Document"
-    WriteRegStr HKCU "Software\Classes\MarkdownReader.mdfile\DefaultIcon" "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}",0'
-    WriteRegStr HKCU "Software\Classes\MarkdownReader.mdfile\shell\open\command" "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" "%1"'
+    WriteRegStr HKCU "Software\Classes\LiveMD.mdfile" "" "Markdown Document"
+    WriteRegStr HKCU "Software\Classes\LiveMD.mdfile\DefaultIcon" "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}",0'
+    WriteRegStr HKCU "Software\Classes\LiveMD.mdfile\shell\open\command" "" '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" "%1"'
 
     ; Notify shell of change
     System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
@@ -69,6 +69,6 @@ FunctionEnd
   DeleteRegKey HKCU "Software\Classes\.markdown"
   DeleteRegKey HKCU "Software\Classes\.mdown"
   DeleteRegKey HKCU "Software\Classes\.mkd"
-  DeleteRegKey HKCU "Software\Classes\MarkdownReader.mdfile"
+  DeleteRegKey HKCU "Software\Classes\LiveMD.mdfile"
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
 !macroend

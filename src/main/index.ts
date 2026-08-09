@@ -199,7 +199,7 @@ async function createWindow(): Promise<void> {
     minWidth: 600,
     minHeight: 400,
     backgroundColor: '#1a1d23',
-    title: 'Markdown Reader',
+    title: 'LiveMD',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),

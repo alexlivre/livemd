@@ -1,5 +1,5 @@
 /* ============================================================
-   Theme tokens — dark (default) and light
+   Theme tokens — dark (default) and soft
    ============================================================ */
 :root,
 :root[data-theme='dark'] {
@@ -69,15 +69,15 @@
   color-scheme: dark;
 }
 
-:root[data-theme='light'] {
-  /* Surfaces */
-  --bg-app: #fafbfc;
-  --bg-titlebar: #ffffff;
-  --bg-tabbar: #f4f6f9;
-  --bg-tab-active: #ffffff;
-  --bg-tab-hover: #eceff3;
-  --bg-content: #ffffff;
-  --bg-code: #f3f4f6;
+:root[data-theme='soft'] {
+  /* Surfaces — soft off-white instead of pure white to reduce eye strain */
+  --bg-app: #f5f5f5;
+  --bg-titlebar: #f5f5f5;
+  --bg-tabbar: #f0f0f0;
+  --bg-tab-active: #f5f5f5;
+  --bg-tab-hover: #ececec;
+  --bg-content: #f5f5f5;
+  --bg-code: #eeeeee;
   --bg-elevated: #ffffff;
 
   /* Borders */
@@ -230,6 +230,104 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* ============================================================
+   Recent files dropdown (titlebar)
+   ============================================================ */
+.recent-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.recent-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  max-width: 420px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  padding: 6px;
+  z-index: 200;
+}
+
+.recent-menu[hidden] {
+  display: none;
+}
+
+.recent-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recent-menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-menu-item:hover {
+  background: var(--bg-tab-hover);
+}
+
+.recent-menu-name {
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-menu-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-empty {
+  padding: 14px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.recent-clear {
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--danger);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.recent-clear:hover {
+  background: var(--bg-tab-hover);
+}
+
+#btn-recent.is-active {
+  background: var(--bg-tab-hover);
+  color: var(--text);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -281,23 +379,23 @@ body {
 /* ============================================================
    Theme toggle button — swaps icons based on current theme
    ============================================================ */
-#btn-theme .icon-sun,
-#btn-theme .icon-moon {
+#btn-theme .icon-moon,
+#btn-theme .icon-soft {
   width: 16px;
   height: 16px;
 }
 
-:root[data-theme='dark'] #btn-theme .icon-sun {
-  display: block;
-}
 :root[data-theme='dark'] #btn-theme .icon-moon {
   display: none;
 }
-:root[data-theme='light'] #btn-theme .icon-sun {
-  display: none;
-}
-:root[data-theme='light'] #btn-theme .icon-moon {
+:root[data-theme='dark'] #btn-theme .icon-soft {
   display: block;
+}
+:root[data-theme='soft'] #btn-theme .icon-moon {
+  display: block;
+}
+:root[data-theme='soft'] #btn-theme .icon-soft {
+  display: none;
 }
 
 /* ============================================================
@@ -497,6 +595,55 @@ body {
 }
 
 /* ============================================================
+   Recent files list (empty state)
+   ============================================================ */
+.recent-section {
+  margin-top: 18px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.recent-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-item {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-code);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.recent-item:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ============================================================
    Markdown body
    ============================================================ */
 .markdown-body {
@@ -621,6 +768,40 @@ body {
   padding: 0;
   font-size: 0.85em;
   color: var(--hljs-text);
+}
+
+/* ============================================================
+   Code block copy button
+   ============================================================ */
+.markdown-body .code-block {
+  position: relative;
+}
+
+.markdown-body .code-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.6;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.markdown-body .code-copy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.markdown-body .code-copy:active {
+  transform: scale(0.96);
 }
 
 .markdown-body table {
@@ -875,7 +1056,7 @@ body {
   animation: drop-overlay-in 0.15s ease-out;
 }
 
-:root[data-theme='light'] .drop-overlay {
+:root[data-theme='soft'] .drop-overlay {
   background: rgba(240, 242, 245, 0.55);
 }
 

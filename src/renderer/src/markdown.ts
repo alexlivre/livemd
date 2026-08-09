@@ -68,7 +68,7 @@ marked.use({
       if (lang && hljs.getLanguage(lang)) {
         try {
           const highlighted = hljs.highlight(safe, { language: lang, ignoreIllegals: true }).value;
-          return `<pre><code class="hljs language-${lang}">${highlighted}</code></pre>`;
+          return `<div class="code-block"><button class="code-copy" type="button" aria-label="Copiar código">Copiar</button><pre><code class="hljs language-${lang}">${highlighted}</code></pre></div>`;
         } catch {
           /* fall through */
         }
@@ -76,7 +76,7 @@ marked.use({
 
       const auto = hljs.highlightAuto(safe).value;
       const cls = auto.includes('class="hljs') ? '' : ' class="hljs"';
-      return `<pre><code${cls}>${auto}</code></pre>`;
+      return `<div class="code-block"><button class="code-copy" type="button" aria-label="Copiar código">Copiar</button><pre><code${cls}>${auto}</code></pre></div>`;
     }
   }
 });

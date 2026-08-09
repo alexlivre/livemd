@@ -14,4 +14,5 @@ export interface MdApi {
   onOpenPath: (handler: (filePath: string) => void) => () => void;
   onFileEvent: (handler: (event: import('./types').FileEvent) => void) => () => void;
   getPathForFile: (file: File) => string;
+  copyText: (text: string) => void;
 }

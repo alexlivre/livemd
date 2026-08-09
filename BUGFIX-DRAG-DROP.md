@@ -1,8 +1,8 @@
 # Correção do Drag & Drop — Causas dos Erros e Soluções
 
 **Data:** 2026-08-09
-**Escopo:** Arquivos `.md` arrastados do Explorer não abriam no Markdown Reader (Electron 32.3.3)
-**Status:** Corrigido e empacotado (`release/Markdown Reader-Setup-1.0.0.exe`)
+**Escopo:** Arquivos `.md` arrastados do Explorer não abriam no LiveMD (Electron 32.3.3)
+**Status:** Corrigido e empacotado (`release/LiveMD-Setup-1.0.0.exe`)
 
 ---
 

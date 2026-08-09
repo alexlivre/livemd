@@ -1,4 +1,4 @@
-# Markdown Reader
+# LiveMD
 
 Leitor de Markdown feito com **Electron + TypeScript**.
 
@@ -29,14 +29,14 @@ npm run typecheck
 
 ```bash
 npm run build:icon       # gera build/icon.png e build/icon.ico a partir do SVG
-npm run dist:win         # build + ícone + electron-builder (gera release/Markdown Reader-Setup-1.0.0.exe)
+npm run dist:win         # build + ícone + electron-builder (gera release/LiveMD-Setup-1.0.0.exe)
 ```
 
-O instalador fica em `release/Markdown Reader-Setup-1.0.0.exe` (~80 MB). A versão portátil (sem instalador) fica em `release/win-unpacked/Markdown Reader.exe`.
+O instalador fica em `release/LiveMD-Setup-1.0.0.exe` (~80 MB). A versão portátil (sem instalador) fica em `release/win-unpacked/LiveMD.exe`.
 
 ### Definir como leitor padrão
 
-O instalador NSIS tem uma página extra perguntando se você quer tornar o app padrão para `.md`, `.markdown`, `.mdown`, `.mkd`. A associação também é registrada **automaticamente** pela configuração `fileAssociations` do electron-builder — após instalar, basta clicar com o botão direito em um `.md` → **Abrir com → Markdown Reader → Sempre usar este app**.
+O instalador NSIS tem uma página extra perguntando se você quer tornar o app padrão para `.md`, `.markdown`, `.mdown`, `.mkd`. A associação também é registrada **automaticamente** pela configuração `fileAssociations` do electron-builder — após instalar, basta clicar com o botão direito em um `.md` → **Abrir com → LiveMD → Sempre usar este app**.
 
 > O instalador é **per-user** (`perMachine: false`), então não precisa de administrador. O registro vai em `HKCU`, não `HKLM`.
 

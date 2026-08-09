@@ -1,6 +1,6 @@
 {
-  "name": "md-reader",
-  "productName": "Markdown Reader",
+  "name": "livemd",
+  "productName": "LiveMD",
   "version": "1.0.0",
   "description": "Leitor de Markdown com abas e auto-reload ao alterar o arquivo",
   "main": "out/main/index.js",
@@ -35,8 +35,8 @@
     "vite": "^5.4.7"
   },
   "build": {
-    "appId": "com.mdreader.app",
-    "productName": "Markdown Reader",
+    "appId": "com.livemd.app",
+    "productName": "LiveMD",
     "copyright": "Copyright © 2025",
     "publish": null,
     "directories": {
@@ -67,7 +67,7 @@
       "allowElevation": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Markdown Reader",
+      "shortcutName": "LiveMD",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",

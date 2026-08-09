@@ -1,12 +1,14 @@
-export type ThemeName = 'dark' | 'light';
+export type ThemeName = 'dark' | 'soft';
 
 const STORAGE_KEY = 'md-reader.theme';
-const DEFAULT_THEME: ThemeName = 'dark';
+const DEFAULT_THEME: ThemeName = 'soft';
+const THEME_CYCLE: ThemeName[] = ['dark', 'soft'];
 
 function readStoredTheme(): ThemeName | null {
   try {
     const value = localStorage.getItem(STORAGE_KEY);
-    if (value === 'dark' || value === 'light') return value;
+    if (value === 'dark' || value === 'soft') return value;
+    if (value === 'light') return 'soft';
   } catch {
     /* localStorage may be disabled */
   }
@@ -26,8 +28,8 @@ export function getStoredTheme(): ThemeName | null {
 }
 
 export function getEffectiveTheme(): ThemeName {
-  // Dark is always the default. The OS preference is ignored unless the user
-  // explicitly opts into light mode.
+  // Soft is the default. The OS preference is ignored unless the user
+  // explicitly opts into dark mode.
   return readStoredTheme() ?? DEFAULT_THEME;
 }
 
@@ -41,7 +43,9 @@ export function setTheme(theme: ThemeName): void {
 }
 
 export function toggleTheme(): ThemeName {
-  const next: ThemeName = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+  const current = getEffectiveTheme();
+  const nextIndex = (THEME_CYCLE.indexOf(current) + 1) % THEME_CYCLE.length;
+  const next: ThemeName = THEME_CYCLE[nextIndex];
   setTheme(next);
   return next;
 }

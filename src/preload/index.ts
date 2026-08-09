@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from 'electron';
+import { contextBridge, clipboard, ipcRenderer, webUtils } from 'electron';
 import type { FileEvent } from '@shared/types';
 import type { MdApi, OpenedFile } from '@shared/api';
 
@@ -22,7 +22,8 @@ const api: MdApi = {
   },
   // Electron 32+ removed File.path; use webUtils to resolve a real OS path
   // for files dropped into the renderer.
-  getPathForFile: (file: File) => webUtils.getPathForFile(file)
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  copyText: (text: string) => clipboard.writeText(text)
 };
 
 contextBridge.exposeInMainWorld('mdApi', api);

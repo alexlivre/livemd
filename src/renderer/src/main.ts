@@ -3,6 +3,7 @@ import type { MdApi } from '@shared/api';
 import { TabManager, type TabData } from './tabs';
 import { renderMarkdown } from './markdown';
 import { initTheme, toggleTheme } from './theme';
+import { clearRecentFiles, getRecentFiles, recordRecentFile, removeRecentFile } from './recent';
 
 declare global {
   interface Window {
@@ -20,6 +21,8 @@ const statusLeft = document.getElementById('status-left') as HTMLSpanElement;
 const statusRight = document.getElementById('status-right') as HTMLSpanElement;
 const btnNew = document.getElementById('btn-new') as HTMLButtonElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
+const btnRecent = document.getElementById('btn-recent') as HTMLButtonElement;
+const recentMenu = document.getElementById('recent-menu') as HTMLDivElement;
 const fabOpen = document.getElementById('fab-open') as HTMLButtonElement;
 const dropOverlay = document.getElementById('drop-overlay') as HTMLDivElement;
 
@@ -78,7 +81,31 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
   }
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeAttr(text: string): string {
+  return escapeHtml(text).replace(/"/g, '&quot;');
+}
+
 function renderEmpty(): void {
+  const recent = getRecentFiles();
+  const recentHtml =
+    recent.length > 0
+      ? `<div class="recent-section">
+           <div class="recent-title">Abertos recentemente</div>
+           <ul class="recent-list">
+             ${recent
+               .map(
+                 (p) =>
+                   `<li><button class="recent-item" type="button" data-path="${escapeAttr(p)}" title="${escapeAttr(p)}">${escapeHtml(basename(p))}</button></li>`
+               )
+               .join('')}
+           </ul>
+         </div>`
+      : '';
+
   contentEl.innerHTML = `
     <div class="empty-state">
       <div class="empty-illustration" aria-hidden="true">
@@ -90,16 +117,23 @@ function renderEmpty(): void {
         </svg>
       </div>
       <h1>Nenhum arquivo aberto</h1>
-      <p>Abra um arquivo <code>.md</code> para começar a ler.</p>
+      <p>Abra um arquivo <code>.md</code> ou arraste pra cá.</p>
       <button id="btn-open-empty" class="btn btn-primary">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 5v14M5 12h14"/>
         </svg>
         Abrir arquivo
       </button>
+      ${recentHtml}
     </div>
   `;
   document.getElementById('btn-open-empty')?.addEventListener('click', () => void openFiles());
+  for (const item of contentEl.querySelectorAll<HTMLButtonElement>('.recent-item')) {
+    item.addEventListener('click', () => {
+      const path = item.dataset.path;
+      if (path) void openPath(path);
+    });
+  }
 }
 
 async function renderContent(state: { tabs: TabData[]; activeId: string | null }): Promise<void> {
@@ -140,6 +174,7 @@ async function openFiles(): Promise<void> {
     }
     for (const file of files) {
       manager.add(file);
+      recordRecentFile(file.filePath);
     }
     setStatus(`${files.length} arquivo(s) aberto(s)`, 'ok');
   } catch (err) {
@@ -182,8 +217,10 @@ async function openPath(filePath: string): Promise<void> {
     setStatus(`Abrindo ${basename(filePath)}...`, '');
     const file = await api.readFile(filePath);
     manager.add(file);
+    recordRecentFile(file.filePath);
     setStatus(`Arquivo aberto: ${file.fileName}`, 'ok');
   } catch (err) {
+    removeRecentFile(filePath);
     setStatus(`Erro ao abrir: ${errorMessage(err)}`, 'err');
   }
 }
@@ -347,10 +384,89 @@ function bindDragAndDrop(): void {
   );
 }
 
+// ---- Code copy (event delegation on the content container) ----
+function bindCodeCopy(): void {
+  contentEl.addEventListener('click', (evt) => {
+    const target = evt.target as HTMLElement | null;
+    if (!target) return;
+    const btn = target.closest<HTMLButtonElement>('.code-copy');
+    if (!btn) return;
+    const code = btn.closest('.code-block')?.querySelector('code');
+    if (!code) return;
+    api.copyText(code.textContent ?? '');
+    btn.textContent = 'Copiado!';
+    window.setTimeout(() => {
+      btn.textContent = 'Copiar';
+    }, 1500);
+  });
+}
+
+// ---- Recent files (titlebar dropdown) ----
+function renderRecentMenu(): void {
+  const files = getRecentFiles();
+  if (files.length === 0) {
+    recentMenu.innerHTML = `<div class="recent-empty">Nenhum arquivo recente</div>`;
+    return;
+  }
+  recentMenu.innerHTML = `
+    <ul class="recent-menu-list">
+      ${files
+        .map(
+          (p) =>
+            `<li><button class="recent-menu-item" type="button" data-path="${escapeAttr(p)}" title="${escapeAttr(p)}"><span class="recent-menu-name">${escapeHtml(basename(p))}</span><span class="recent-menu-path">${escapeHtml(p)}</span></button></li>`
+        )
+        .join('')}
+    </ul>
+    <button class="recent-clear" type="button">Limpar histórico</button>
+  `;
+  for (const item of recentMenu.querySelectorAll<HTMLButtonElement>('.recent-menu-item')) {
+    item.addEventListener('click', () => {
+      closeRecentMenu();
+      const path = item.dataset.path;
+      if (path) void openPath(path);
+    });
+  }
+  recentMenu.querySelector('.recent-clear')?.addEventListener('click', () => {
+    clearRecentFiles();
+    renderRecentMenu();
+  });
+}
+
+function closeRecentMenu(): void {
+  recentMenu.hidden = true;
+  btnRecent.classList.remove('is-active');
+}
+
+function toggleRecentMenu(): void {
+  if (recentMenu.hidden) {
+    renderRecentMenu();
+    recentMenu.hidden = false;
+    btnRecent.classList.add('is-active');
+  } else {
+    closeRecentMenu();
+  }
+}
+
+function bindRecentMenu(): void {
+  btnRecent.addEventListener('click', (evt) => {
+    evt.stopPropagation();
+    toggleRecentMenu();
+  });
+
+  document.addEventListener('click', (evt) => {
+    if (recentMenu.hidden) return;
+    const target = evt.target as Node | null;
+    if (target && recentMenu.contains(target)) return;
+    closeRecentMenu();
+  });
+}
+
 function bindUi(): void {
   btnNew.addEventListener('click', () => void openFiles());
   btnTheme.addEventListener('click', () => toggleTheme());
   fabOpen.addEventListener('click', () => void openFiles());
+  bindCodeCopy();
+  bindRecentMenu();
 
   window.addEventListener('keydown', (evt) => {
     const isCtrl = evt.ctrlKey || evt.metaKey;
@@ -366,6 +482,8 @@ function bindUi(): void {
     } else if (isCtrl && evt.shiftKey && evt.key.toLowerCase() === 't') {
       evt.preventDefault();
       toggleTheme();
+    } else if (evt.key === 'Escape' && !recentMenu.hidden) {
+      closeRecentMenu();
     }
   });
 
