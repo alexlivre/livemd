@@ -7,3 +7,5 @@ dist/
 .DS_Store
 release/
 .codegraph/
+build/icon.ico
+build/icon.png

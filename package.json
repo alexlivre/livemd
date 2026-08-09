@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Leitor de Markdown com abas e auto-reload ao alterar o arquivo",
   "main": "out/main/index.js",
-  "author": "you",
+  "author": "Alex Santos <alexbreno2005@gmail.com> (https://alexlivre.dev/)",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -24,9 +24,7 @@
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
-    "@types/dompurify": "^3.0.5",
     "@types/node": "^22.7.5",
-    "@vitejs/plugin-react": "^4.3.1",
     "electron": "^32.1.2",
     "electron-builder": "^26.0.12",
     "electron-vite": "^2.3.0",
@@ -37,7 +35,7 @@
   "build": {
     "appId": "com.livemd.app",
     "productName": "LiveMD",
-    "copyright": "Copyright © 2025",
+    "copyright": "Copyright © 2026 Alex Santos",
     "publish": null,
     "directories": {
       "output": "release",

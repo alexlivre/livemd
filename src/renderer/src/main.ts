@@ -1,6 +1,6 @@
 import type { FileEvent } from '@shared/types';
 import type { MdApi } from '@shared/api';
-import { MESSAGES, type MsgKey } from '@shared/i18n';
+import { MESSAGES, LANG_OPTIONS, type MsgKey } from '@shared/i18n';
 import { TabManager, type TabData } from './tabs';
 import { renderMarkdown } from './markdown';
 import { initTheme, toggleTheme } from './theme';
@@ -468,9 +468,7 @@ function closeRecentMenu(): void {
 }function renderLangMenu(): void {
   const items: Array<{ value: 'auto' | 'pt' | 'en' | 'es'; label: string }> = [
     { value: 'auto', label: t('langAuto', { lang: getOsLangLabel() }) },
-    { value: 'pt', label: 'Português' },
-    { value: 'en', label: 'English' },
-    { value: 'es', label: 'Español' }
+    ...LANG_OPTIONS
   ];
   langMenu.innerHTML = `
     <div class="lang-menu-title">${escapeHtml(t('langMenuTitle'))}</div>

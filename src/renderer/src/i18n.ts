@@ -42,10 +42,6 @@ export function getOverride(): LangSetting {
   return override;
 }
 
-export function getOsLang(): AppLanguage {
-  return osLang;
-}
-
 export function getOsLangLabel(): string {
   return OS_LANG_LABELS[effective][osLang];
 }

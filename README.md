@@ -257,7 +257,7 @@ npm install
 
 ### Project conventions
 
-- **Vanilla DOM renderer.** No React, no components/JSX — the `@vitejs/plugin-react` devDependency is vestigial and must not be used.
+- **Vanilla DOM renderer.** No React, no components/JSX — plain TypeScript and DOM only.
 - **TypeScript strict** with per-target tsconfigs; path aliases `@shared/*` and `@renderer/*` are configured in `electron.vite.config.ts` **and** both tsconfigs — keep in sync.
 - **Code, comments and commits in English; UI strings are localized via `src/shared/i18n.ts` (pt/en/es — OS-detected with a manual override in the titlebar; unsupported locales fall back to English).**
 - **Security posture is fixed:** `contextIsolation: true`, `nodeIntegration: false`, CSP `script-src 'self'` (no inline scripts — attach listeners with `addEventListener`).
