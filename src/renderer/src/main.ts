@@ -43,6 +43,9 @@ const aboutDesc = document.getElementById('about-desc') as HTMLParagraphElement;
 const aboutRepoLink = document.getElementById('about-repo-link') as HTMLButtonElement;
 
 const REPO_URL = 'https://github.com/alexlivre/livemd';
+
+const UPDATE_CHECK_KEY = 'md-reader.update-check';
+let updateVersion: string | null = null;
 const fabOpen = document.getElementById('fab-open') as HTMLButtonElement;
 const dropOverlay = document.getElementById('drop-overlay') as HTMLDivElement;
 
@@ -71,6 +74,7 @@ function applyStaticStrings(): void {
     const key = el.dataset.i18nAria as MsgKey | undefined;
     if (key && key in MESSAGES.en) el.setAttribute('aria-label', t(key));
   }
+  btnAbout.title = updateVersion ? t('updateAvailable', { v: updateVersion }) : t('aboutTooltip');
 }
 
 function refreshUi(): void {
@@ -615,6 +619,24 @@ function bindUi(): void {
   bindDragAndDrop();
 }
 
+async function checkForUpdate(): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  let lastCheck = '';
+  try {
+    lastCheck = localStorage.getItem(UPDATE_CHECK_KEY) ?? '';
+    localStorage.setItem(UPDATE_CHECK_KEY, today);
+  } catch {
+    /* localStorage may be disabled — check anyway */
+  }
+  if (lastCheck === today) return;
+  const result = await api.checkUpdate();
+  if (result && result.hasUpdate) {
+    updateVersion = result.latestVersion.replace(/^v/, '');
+    applyStaticStrings();
+    btnAbout.classList.add('has-update');
+  }
+}
+
 async function bootstrap(): Promise<void> {
   await initI18n({
     getOsLocale: () => api.getOsLocale(),
@@ -634,6 +656,7 @@ async function bootstrap(): Promise<void> {
 
   api.onFileEvent(handleFileEvent);
   bindUi();
+  void checkForUpdate();
 }
 
 void bootstrap();

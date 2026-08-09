@@ -57,7 +57,8 @@ const enMessages = {
   aboutLicense: 'License',
   aboutRepo: 'Repository',
   aboutStack: 'Built with Electron + TypeScript',
-  aboutClose: 'Close'
+  aboutClose: 'Close',
+  updateAvailable: 'Update {v} available'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -117,7 +118,8 @@ const ptMessages: Record<MsgKey, string> = {
   aboutLicense: 'Licença',
   aboutRepo: 'Repositório',
   aboutStack: 'Feito com Electron + TypeScript',
-  aboutClose: 'Fechar'
+  aboutClose: 'Fechar',
+  updateAvailable: 'Atualização {v} disponível'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -175,7 +177,8 @@ const esMessages: Record<MsgKey, string> = {
   aboutLicense: 'Licencia',
   aboutRepo: 'Repositorio',
   aboutStack: 'Hecho con Electron + TypeScript',
-  aboutClose: 'Cerrar'
+  aboutClose: 'Cerrar',
+  updateAvailable: 'Actualización {v} disponible'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {

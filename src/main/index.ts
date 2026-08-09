@@ -12,6 +12,18 @@ let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
 let currentLang: AppLanguage = mapOsLocale(app.getLocale());
 const REPO_URL = 'https://github.com/alexlivre/livemd';
+const REPO_API = 'alexlivre/livemd';
+
+function parseVersion(value: string): number[] {
+  const parts = value.replace(/^v/, '').split('.');
+  return [0, 1, 2].map((i) => Number.parseInt(parts[i] ?? '0', 10) || 0);
+}
+
+function versionsDiffer(a: string, b: string): boolean {
+  const va = parseVersion(a);
+  const vb = parseVersion(b);
+  return va[0] !== vb[0] || va[1] !== vb[1] || va[2] !== vb[2];
+}
 
 const SUPPORTED_EXTS = /\.(md|markdown|mdown|mkd|mdx)$/i;
 
@@ -207,6 +219,22 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('app:open-external', async (_evt, url: unknown) => {
     if (url === REPO_URL) {
       await shell.openExternal(REPO_URL);
+    }
+  });
+
+  ipcMain.handle('app:check-update', async () => {
+    try {
+      const res = await fetch(`https://api.github.com/repos/${REPO_API}/releases/latest`, {
+        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'LiveMD' },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { tag_name?: string };
+      const latest = data.tag_name ?? '';
+      if (!latest) return null;
+      return { latestVersion: latest, hasUpdate: versionsDiffer(latest, app.getVersion()) };
+    } catch {
+      return null;
     }
   });
 }

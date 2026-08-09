@@ -1286,3 +1286,19 @@ body {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* Update-available dot on the About button */
+.has-update {
+  position: relative;
+}
+
+.has-update::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}

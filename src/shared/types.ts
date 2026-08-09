@@ -29,7 +29,8 @@ export type IpcChannel =
   | 'app:get-locale'
   | 'app:set-language'
   | 'app:get-version'
-  | 'app:open-external';
+  | 'app:open-external'
+  | 'app:check-update';
 
 export type FileEvent =
   | { kind: 'changed'; filePath: string; content: string; modifiedAt: number }

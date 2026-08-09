@@ -1,7 +1,7 @@
 import { contextBridge, clipboard, ipcRenderer, webUtils } from 'electron';
 import type { FileEvent } from '@shared/types';
 import type { AppLanguage } from '@shared/i18n';
-import type { MdApi, OpenedFile } from '@shared/api';
+import type { MdApi, OpenedFile, UpdateCheck } from '@shared/api';
 
 const api: MdApi = {
   openDialog: () => ipcRenderer.invoke('file:open-dialog') as Promise<OpenedFile[]>,
@@ -17,6 +17,7 @@ const api: MdApi = {
   getAppVersion: () => ipcRenderer.invoke('app:get-version') as Promise<string>,
   openExternal: (url: string) =>
     ipcRenderer.invoke('app:open-external', url) as Promise<void>,
+  checkUpdate: () => ipcRenderer.invoke('app:check-update') as Promise<UpdateCheck | null>,
   onOpenPath: (handler) => {
     const listener = (_: unknown, filePath: string) => handler(filePath);
     ipcRenderer.on('app:open-path', listener);
