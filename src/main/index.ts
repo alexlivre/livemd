@@ -12,6 +12,7 @@ let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
 let currentLang: AppLanguage = mapOsLocale(app.getLocale());
 const REPO_URL = 'https://github.com/alexlivre/livemd';
+const REPO_RELEASES_URL = `${REPO_URL}/releases`;
 const REPO_API = 'alexlivre/livemd';
 
 function parseVersion(value: string): number[] {
@@ -217,8 +218,8 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('app:get-version', () => app.getVersion());
 
   ipcMain.handle('app:open-external', async (_evt, url: unknown) => {
-    if (url === REPO_URL) {
-      await shell.openExternal(REPO_URL);
+    if (url === REPO_URL || url === REPO_RELEASES_URL) {
+      await shell.openExternal(url);
     }
   });
 

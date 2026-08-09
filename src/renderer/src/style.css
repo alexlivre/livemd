@@ -1287,6 +1287,20 @@ body {
   color: var(--text-muted);
 }
 
+/* Update-available section inside the About dialog */
+.about-update {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.about-update-text {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* Update-available dot on the About button */
 .has-update {
   position: relative;

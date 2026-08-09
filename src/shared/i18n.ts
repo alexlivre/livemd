@@ -58,7 +58,8 @@ const enMessages = {
   aboutRepo: 'Repository',
   aboutStack: 'Built with Electron + TypeScript',
   aboutClose: 'Close',
-  updateAvailable: 'Update {v} available'
+  updateAvailable: 'Update {v} available',
+  updateDownload: 'Go to downloads'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -119,7 +120,8 @@ const ptMessages: Record<MsgKey, string> = {
   aboutRepo: 'Repositório',
   aboutStack: 'Feito com Electron + TypeScript',
   aboutClose: 'Fechar',
-  updateAvailable: 'Atualização {v} disponível'
+  updateAvailable: 'Atualização {v} disponível',
+  updateDownload: 'Ir para downloads'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -178,7 +180,8 @@ const esMessages: Record<MsgKey, string> = {
   aboutRepo: 'Repositorio',
   aboutStack: 'Hecho con Electron + TypeScript',
   aboutClose: 'Cerrar',
-  updateAvailable: 'Actualización {v} disponible'
+  updateAvailable: 'Actualización {v} disponible',
+  updateDownload: 'Ir a descargas'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {

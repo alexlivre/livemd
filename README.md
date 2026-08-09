@@ -59,6 +59,7 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **Two themes** — `dark` and `soft` (default), toggled with `Ctrl+Shift+T` or the titlebar button; preference persisted per user
 - **Localized UI** — follows the OS language (pt-BR, en-US, es) with a manual override dropdown in the titlebar; unsupported OS locales fall back to English
 - **About dialog** — info button in the titlebar shows version, author, license and the repository link (opens in the browser)
+- **Update indicator** — a dot on the About button appears when a newer release exists (silent check once a day); the About dialog links to the downloads page
 - **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, `contextIsolation` on, no remote content
 - **NSIS installer** — per-user install (no admin), custom page asking to set LiveMD as the default app for Markdown files
 - **Flat UI, no native menus** — the Electron menu bar is removed; every action is an in-window control with shortcuts shown in the status bar

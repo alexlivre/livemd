@@ -41,8 +41,12 @@ const aboutCloseBtn = document.getElementById('about-close') as HTMLButtonElemen
 const aboutVersion = document.getElementById('about-version') as HTMLDivElement;
 const aboutDesc = document.getElementById('about-desc') as HTMLParagraphElement;
 const aboutRepoLink = document.getElementById('about-repo-link') as HTMLButtonElement;
+const aboutUpdate = document.getElementById('about-update') as HTMLDivElement;
+const aboutUpdateText = document.getElementById('about-update-text') as HTMLParagraphElement;
+const aboutUpdateBtn = document.getElementById('about-update-btn') as HTMLButtonElement;
 
 const REPO_URL = 'https://github.com/alexlivre/livemd';
+const REPO_RELEASES_URL = `${REPO_URL}/releases`;
 
 const UPDATE_CHECK_KEY = 'md-reader.update-check';
 let updateVersion: string | null = null;
@@ -527,6 +531,12 @@ async function openAbout(): Promise<void> {
   const version = await api.getAppVersion();
   aboutVersion.textContent = t('aboutVersion', { v: version });
   aboutDesc.textContent = t('aboutDesc');
+  if (updateVersion) {
+    aboutUpdateText.textContent = t('updateAvailable', { v: updateVersion });
+    aboutUpdate.hidden = false;
+  } else {
+    aboutUpdate.hidden = true;
+  }
   aboutModal.hidden = false;
 }
 
@@ -538,6 +548,7 @@ function bindAbout(): void {
   btnAbout.addEventListener('click', () => void openAbout());
   aboutCloseBtn.addEventListener('click', closeAbout);
   aboutRepoLink.addEventListener('click', () => void api.openExternal(REPO_URL));
+  aboutUpdateBtn.addEventListener('click', () => void api.openExternal(REPO_RELEASES_URL));
   aboutModal.addEventListener('click', (evt) => {
     if (evt.target === aboutModal) closeAbout();
   });
