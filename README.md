@@ -57,6 +57,7 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **Recent files** — last 10 opened files in a titlebar dropdown, clearable, click to reopen
 - **"Open with" integration** — file associations for `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`; single-instance lock focuses the running window and opens the file in a new tab
 - **Two themes** — `dark` and `soft` (default), toggled with `Ctrl+Shift+T` or the titlebar button; preference persisted per user
+- **Localized UI** — follows the OS language (pt-BR, en-US, es) with a manual override dropdown in the titlebar; unsupported OS locales fall back to English
 - **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, `contextIsolation` on, no remote content
 - **NSIS installer** — per-user install (no admin), custom page asking to set LiveMD as the default app for Markdown files
 - **Flat UI, no native menus** — the Electron menu bar is removed; every action is an in-window control with shortcuts shown in the status bar
@@ -258,7 +259,7 @@ npm install
 
 - **Vanilla DOM renderer.** No React, no components/JSX — the `@vitejs/plugin-react` devDependency is vestigial and must not be used.
 - **TypeScript strict** with per-target tsconfigs; path aliases `@shared/*` and `@renderer/*` are configured in `electron.vite.config.ts` **and** both tsconfigs — keep in sync.
-- **Code, comments and commits in English; UI strings in pt-BR.**
+- **Code, comments and commits in English; UI strings are localized via `src/shared/i18n.ts` (pt/en/es — OS-detected with a manual override in the titlebar; unsupported locales fall back to English).**
 - **Security posture is fixed:** `contextIsolation: true`, `nodeIntegration: false`, CSP `script-src 'self'` (no inline scripts — attach listeners with `addEventListener`).
 - **Exactly two themes** (`dark`, `soft`) — new UI must use CSS tokens, never hardcoded colors.
 
