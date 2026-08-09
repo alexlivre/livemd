@@ -1,0 +1,14 @@
+# SignPath signing policy for LiveMD.
+#
+# IMPORTANT: after the SignPath Foundation project is created, rename the
+# parent directory (and this file) to match the slugs assigned by SignPath:
+#
+#   .signpath/policies/<project-slug>/<signing-policy-slug>.yml
+#
+# OSS builds must run on GitHub-hosted runners — SignPath verifies this.
+
+github-policies:
+  runners:
+    require_github_hosted: true
+  build:
+    disallow_reruns: true

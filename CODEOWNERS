@@ -1,0 +1,3 @@
+# Restrict writes to the SignPath signing-policy files so a compromised
+# contributor cannot loosen the signing requirements.
+/.signpath/ @alexlivre
