@@ -299,6 +299,10 @@ LiveMD is a local, read-only viewer, and it's built defensively:
 - **Watch scope** — live reload covers files open in tabs; a closed tab's watcher is released.
 - **File types** — only Markdown extensions (`.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`) are accepted by the open dialog and drag & drop.
 
+## Code signing policy
+
+LiveMD applies for free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (pending). Full policy, team roles and privacy statement: [CODE_SIGNING_POLICY.md](./CODE_SIGNING_POLICY.md).
+
 ## Contributing
 
 Contributions are welcome! TL;DR:
