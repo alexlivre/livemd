@@ -330,6 +330,7 @@ Contributions are welcome! TL;DR:
 - [highlight.js](https://highlightjs.org) — syntax highlighting
 - [chokidar](https://github.com/paulmillr/chokidar) — the file watcher behind live reload
 - [electron-builder](https://www.electron.build) — Windows packaging
+- [Pi](https://pi.dev) — the AI coding agent (by [Earendil](https://earendil.com)) used to start and shape this project
 - [OpenCode](https://github.com/anomalyco/opencode) — the AI-powered CLI used to build, test, and maintain this project
 
 ## Links
