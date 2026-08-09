@@ -69,6 +69,7 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
+      "installerHeader": "build/installer-header.bmp",
       "deleteAppDataOnUninstall": false,
       "warningsAsErrors": false,
       "include": "build/installer.nsh"

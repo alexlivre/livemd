@@ -18,7 +18,7 @@ Page custom setAsDefaultPageCreate setAsDefaultPageLeave
 
 Function setAsDefaultPageCreate
   ; MUI.nsh can't be used inside Page custom functions in this context.
-  ; Render header manually using labels.
+  ; Render header manually using labels. Colors follow the app's soft theme.
 
   nsDialogs::Create 1018
   Pop $0
@@ -26,11 +26,11 @@ Function setAsDefaultPageCreate
 
   ${NSD_CreateLabel} 0 0 100% 20u "Aplicativo padrão"
   Pop $0
-  SetCtlColors $0 "" "ffffff"
+  SetCtlColors $0 "2563eb" "ffffff"
 
   ${NSD_CreateLabel} 0 24u 100% 20u "LiveMD pode ser definido como leitor padrão"
   Pop $0
-  SetCtlColors $0 "" "ffffff"
+  SetCtlColors $0 "1a1d23" "ffffff"
 
   ; Detect whether Windows already has a user-chosen default app for .md.
   ; If UserChoice exists and points elsewhere, the class default we write is
@@ -45,7 +45,7 @@ setAsDefaultNoConflict:
 
   ${NSD_CreateLabel} 0 56u 100% 60u ""
   Pop $SetAsDefaultLabel
-  SetCtlColors $SetAsDefaultLabel "" "ffffff"
+  SetCtlColors $SetAsDefaultLabel "4a5260" "ffffff"
 
   ${NSD_CreateCheckbox} 0 126u 100% 20u "Sim, tornar padrão para .md e .markdown"
   Pop $SetAsDefaultCheckbox
