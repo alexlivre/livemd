@@ -33,6 +33,8 @@ const btnNew = document.getElementById('btn-new') as HTMLButtonElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
 const btnRecent = document.getElementById('btn-recent') as HTMLButtonElement;
 const recentMenu = document.getElementById('recent-menu') as HTMLDivElement;
+const btnLang = document.getElementById('btn-lang') as HTMLButtonElement;
+const langMenu = document.getElementById('lang-menu') as HTMLDivElement;
 const fabOpen = document.getElementById('fab-open') as HTMLButtonElement;
 const dropOverlay = document.getElementById('drop-overlay') as HTMLDivElement;
 
@@ -463,6 +465,62 @@ function renderRecentMenu(): void {
 function closeRecentMenu(): void {
   recentMenu.hidden = true;
   btnRecent.classList.remove('is-active');
+}function renderLangMenu(): void {
+  const items: Array<{ value: 'auto' | 'pt' | 'en' | 'es'; label: string }> = [
+    { value: 'auto', label: t('langAuto', { lang: getOsLangLabel() }) },
+    { value: 'pt', label: 'Português' },
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Español' }
+  ];
+  langMenu.innerHTML = `
+    <div class="lang-menu-title">${escapeHtml(t('langMenuTitle'))}</div>
+    <ul class="recent-menu-list">
+      ${items
+        .map(
+          (item) =>
+            `<li><button class="lang-menu-item ${item.value === getOverride() ? 'is-active' : ''}" type="button" data-value="${item.value}"><span class="lang-check" aria-hidden="true">✓</span><span class="recent-menu-name">${escapeHtml(item.label)}</span></button></li>`
+        )
+        .join('')}
+    </ul>
+  `;
+  for (const item of langMenu.querySelectorAll<HTMLButtonElement>('.lang-menu-item')) {
+    item.addEventListener('click', () => {
+      const value = item.dataset.value;
+      if (value === 'auto' || value === 'pt' || value === 'en' || value === 'es') {
+        closeLangMenu();
+        if (value !== getOverride()) setOverride(value);
+      }
+    });
+  }
+}
+
+function closeLangMenu(): void {
+  langMenu.hidden = true;
+  btnLang.classList.remove('is-active');
+}
+
+function toggleLangMenu(): void {
+  if (langMenu.hidden) {
+    renderLangMenu();
+    langMenu.hidden = false;
+    btnLang.classList.add('is-active');
+  } else {
+    closeLangMenu();
+  }
+}
+
+function bindLangMenu(): void {
+  btnLang.addEventListener('click', (evt) => {
+    evt.stopPropagation();
+    toggleLangMenu();
+  });
+
+  document.addEventListener('click', (evt) => {
+    if (langMenu.hidden) return;
+    const target = evt.target as Node | null;
+    if (target && langMenu.contains(target)) return;
+    closeLangMenu();
+  });
 }
 
 function toggleRecentMenu(): void {
@@ -495,6 +553,7 @@ function bindUi(): void {
   fabOpen.addEventListener('click', () => void openFiles());
   bindCodeCopy();
   bindRecentMenu();
+  bindLangMenu();
 
   window.addEventListener('keydown', (evt) => {
     const isCtrl = evt.ctrlKey || evt.metaKey;
@@ -512,6 +571,7 @@ function bindUi(): void {
       toggleTheme();
     } else if (evt.key === 'Escape') {
       closeRecentMenu();
+      closeLangMenu();
     }
   });
 

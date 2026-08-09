@@ -305,6 +305,47 @@ body {
   text-align: center;
 }
 
+/* ============================================================
+   Language dropdown (titlebar)
+   ============================================================ */
+.lang-menu-title {
+  padding: 4px 10px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.lang-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lang-menu-item:hover {
+  background: var(--bg-tab-hover);
+}
+
+.lang-check {
+  width: 14px;
+  font-size: 12px;
+  visibility: hidden;
+}
+
+.lang-menu-item.is-active .lang-check {
+  visibility: visible;
+}
+
 .recent-clear {
   width: 100%;
   margin-top: 4px;
