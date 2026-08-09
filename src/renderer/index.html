@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: file:; font-src 'self' data:;"
+    />
+    <title>Markdown Reader</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="titlebar">
+        <div class="titlebar-drag">
+          <div class="app-brand" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 3 14 8 19 8"/>
+              <path d="M9 13l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="app-titles">
+            <span class="app-title">Markdown Reader</span>
+            <span class="app-subtitle">Leitor com abas e auto-reload</span>
+          </div>
+        </div>
+        <div class="titlebar-actions">
+          <button id="btn-theme" class="btn btn-ghost btn-icon" title="Alternar tema (Ctrl+Shift+T)" aria-label="Alternar tema">
+            <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+            </svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <nav id="tabbar" class="tabbar" aria-label="Abas abertas">
+        <div id="tabs" class="tabs" role="tablist"></div>
+        <button id="btn-new" class="tab-new" title="Nova aba (Ctrl+O)" aria-label="Abrir arquivo">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </button>
+      </nav>
+
+      <main id="content" class="content">
+        <div class="empty-state">
+          <div class="empty-illustration" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 3 14 8 19 8"/>
+              <line x1="9" y1="13" x2="15" y2="13"/>
+              <line x1="9" y1="17" x2="15" y2="17"/>
+            </svg>
+          </div>
+          <h1>Nenhum arquivo aberto</h1>
+          <p>Abra um arquivo <code>.md</code> ou arraste pra cá.</p>
+          <button id="btn-open-empty" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Abrir arquivo
+          </button>
+        </div>
+      </main>
+
+      <div id="drop-overlay" class="drop-overlay" aria-hidden="true">
+        <div class="drop-card">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div class="drop-title">Solte para abrir</div>
+          <div class="drop-subtitle">Arquivos <code>.md</code> serão abertos em novas abas</div>
+        </div>
+      </div>
+
+      <button id="fab-open" class="fab" title="Abrir arquivo (Ctrl+O)" aria-label="Abrir arquivo">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>
+          <path d="M12 11v6M9 14l3 3 3-3"/>
+        </svg>
+        <span>Abrir</span>
+      </button>
+
+      <footer id="statusbar" class="statusbar">
+        <div class="status-shortcuts">
+          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>O</kbd> abrir</span>
+          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>W</kbd> fechar aba</span>
+          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> tema</span>
+        </div>
+        <div class="status-messages">
+          <span id="status-left">Pronto</span>
+          <span id="status-right"></span>
+        </div>
+      </footer>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
