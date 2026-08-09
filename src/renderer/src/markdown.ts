@@ -1,6 +1,7 @@
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js/lib/core';
+import { t as i18nT } from './i18n';
 import javascript from 'highlight.js/lib/languages/javascript';
 import typescript from 'highlight.js/lib/languages/typescript';
 import bash from 'highlight.js/lib/languages/bash';
@@ -68,7 +69,7 @@ marked.use({
       if (lang && hljs.getLanguage(lang)) {
         try {
           const highlighted = hljs.highlight(safe, { language: lang, ignoreIllegals: true }).value;
-          return `<div class="code-block"><button class="code-copy" type="button" aria-label="Copiar código">Copiar</button><pre><code class="hljs language-${lang}">${highlighted}</code></pre></div>`;
+          return `<div class="code-block"><button class="code-copy" type="button" aria-label="${i18nT('copyAria')}">${i18nT('copy')}</button><pre><code class="hljs language-${lang}">${highlighted}</code></pre></div>`;
         } catch {
           /* fall through */
         }
@@ -76,7 +77,7 @@ marked.use({
 
       const auto = hljs.highlightAuto(safe).value;
       const cls = auto.includes('class="hljs') ? '' : ' class="hljs"';
-      return `<div class="code-block"><button class="code-copy" type="button" aria-label="Copiar código">Copiar</button><pre><code${cls}>${auto}</code></pre></div>`;
+      return `<div class="code-block"><button class="code-copy" type="button" aria-label="${i18nT('copyAria')}">${i18nT('copy')}</button><pre><code${cls}>${auto}</code></pre></div>`;
     }
   }
 });

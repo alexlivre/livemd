@@ -23,12 +23,12 @@
           </div>
           <div class="app-titles">
             <span class="app-title">LiveMD</span>
-            <span class="app-subtitle">Leitor com abas e auto-reload</span>
+            <span class="app-subtitle" data-i18n="appSubtitle">Leitor com abas e auto-reload</span>
           </div>
         </div>
         <div class="titlebar-actions">
           <div class="recent-wrap">
-            <button id="btn-recent" class="btn btn-ghost btn-icon" title="Arquivos recentes" aria-label="Arquivos recentes">
+            <button id="btn-recent" class="btn btn-ghost btn-icon" title="Arquivos recentes" aria-label="Arquivos recentes" data-i18n-title="recentTooltip">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <polyline points="12 6 12 12 16 14"/>
@@ -36,7 +36,7 @@
             </button>
             <div id="recent-menu" class="recent-menu" hidden></div>
           </div>
-          <button id="btn-theme" class="btn btn-ghost btn-icon" title="Alternar tema (Ctrl+Shift+T)" aria-label="Alternar tema">
+          <button id="btn-theme" class="btn btn-ghost btn-icon" title="Alternar tema (Ctrl+Shift+T)" aria-label="Alternar tema" data-i18n-title="themeTooltip">
             <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
             </svg>
@@ -51,7 +51,7 @@
 
       <nav id="tabbar" class="tabbar" aria-label="Abas abertas">
         <div id="tabs" class="tabs" role="tablist"></div>
-        <button id="btn-new" class="tab-new" title="Nova aba (Ctrl+O)" aria-label="Abrir arquivo">
+        <button id="btn-new" class="tab-new" title="Nova aba (Ctrl+O)" aria-label="Abrir arquivo" data-i18n-title="newTabTooltip">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M12 5v14M5 12h14"/>
           </svg>
@@ -86,12 +86,12 @@
             <polyline points="17 8 12 3 7 8"/>
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          <div class="drop-title">Solte para abrir</div>
-          <div class="drop-subtitle">Arquivos <code>.md</code> serão abertos em novas abas</div>
+          <div class="drop-title" data-i18n="dropTitle">Solte para abrir</div>
+          <div class="drop-subtitle" data-i18n="dropSubtitle">Arquivos <code>.md</code> serão abertos em novas abas</div>
         </div>
       </div>
 
-      <button id="fab-open" class="fab" title="Abrir arquivo (Ctrl+O)" aria-label="Abrir arquivo">
+      <button id="fab-open" class="fab" title="Abrir arquivo (Ctrl+O)" aria-label="Abrir arquivo" data-i18n-title="openTooltip">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>
           <path d="M12 11v6M9 14l3 3 3-3"/>
@@ -101,9 +101,9 @@
 
       <footer id="statusbar" class="statusbar">
         <div class="status-shortcuts">
-          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>O</kbd> abrir</span>
-          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>W</kbd> fechar aba</span>
-          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> tema</span>
+          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>O</kbd> <span data-i18n="shortcutOpen">abrir</span></span>
+          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>W</kbd> <span data-i18n="shortcutCloseTab">fechar aba</span></span>
+          <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> <span data-i18n="shortcutTheme">tema</span></span>
         </div>
         <div class="status-messages">
           <span id="status-left">Pronto</span>

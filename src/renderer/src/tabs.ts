@@ -98,6 +98,10 @@ export class TabManager {
     return this.tabs.find((t) => t.id === this.activeId) ?? null;
   }
 
+  getState(): TabState {
+    return this.snapshot();
+  }
+
   closeByPath(filePath: string): void {
     const tab = this.tabs.find((t) => t.filePath === filePath);
     if (tab) this.close(tab.id);

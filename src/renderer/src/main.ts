@@ -1,9 +1,19 @@
 import type { FileEvent } from '@shared/types';
 import type { MdApi } from '@shared/api';
+import { MESSAGES, type MsgKey } from '@shared/i18n';
 import { TabManager, type TabData } from './tabs';
 import { renderMarkdown } from './markdown';
 import { initTheme, toggleTheme } from './theme';
 import { clearRecentFiles, getRecentFiles, recordRecentFile, removeRecentFile } from './recent';
+import {
+  getEffectiveLang,
+  getOsLangLabel,
+  getOverride,
+  initI18n,
+  setOverride,
+  subscribe as subscribeLang,
+  t
+} from './i18n';
 
 declare global {
   interface Window {
@@ -37,6 +47,24 @@ function setStatusRight(text: string): void {
   statusRight.textContent = text;
 }
 
+function applyStaticStrings(): void {
+  document.documentElement.lang = getEffectiveLang();
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
+    const key = el.dataset.i18n as MsgKey | undefined;
+    if (key && key in MESSAGES.en) el.textContent = t(key);
+  }
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n-title]')) {
+    const key = el.dataset.i18nTitle as MsgKey | undefined;
+    if (key && key in MESSAGES.en) el.title = t(key);
+  }
+}
+
+function refreshUi(): void {
+  const state = manager.getState();
+  renderTabbar(state);
+  void renderContent(state);
+}
+
 function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void {
   tabsEl.replaceChildren();
 
@@ -56,7 +84,7 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
     const closeBtn = document.createElement('span');
     closeBtn.className = 'tab-close';
     closeBtn.setAttribute('role', 'button');
-    closeBtn.setAttribute('aria-label', `Fechar ${tab.fileName}`);
+    closeBtn.setAttribute('aria-label', t('closeTabAria', { name: tab.fileName }));
     closeBtn.textContent = '×';
     closeBtn.addEventListener('click', (evt) => {
       evt.stopPropagation();
@@ -94,7 +122,7 @@ function renderEmpty(): void {
   const recentHtml =
     recent.length > 0
       ? `<div class="recent-section">
-           <div class="recent-title">Abertos recentemente</div>
+           <div class="recent-title">${escapeHtml(t('recentTitle'))}</div>
            <ul class="recent-list">
              ${recent
                .map(
@@ -116,13 +144,13 @@ function renderEmpty(): void {
           <line x1="9" y1="17" x2="15" y2="17"/>
         </svg>
       </div>
-      <h1>Nenhum arquivo aberto</h1>
-      <p>Abra um arquivo <code>.md</code> ou arraste pra cá.</p>
+      <h1>${escapeHtml(t('emptyTitle'))}</h1>
+      <p>${escapeHtml(t('emptyHint'))}</p>
       <button id="btn-open-empty" class="btn btn-primary">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 5v14M5 12h14"/>
         </svg>
-        Abrir arquivo
+        ${escapeHtml(t('openFile'))}
       </button>
       ${recentHtml}
     </div>
@@ -143,7 +171,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
 
   if (!active) {
     renderEmpty();
-    setStatus('Pronto', '');
+    setStatus(t('ready'), '');
     setStatusRight('');
     return;
   }
@@ -151,7 +179,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
   const html = await renderMarkdown(active.content);
   contentEl.innerHTML = `<article class="markdown-body">${html}</article>`;
 
-  setStatus(`Lendo: ${active.fileName}`, 'ok');
+  setStatus(t('reading', { file: active.fileName }), 'ok');
   setStatusRight(formatTimestamp(active.modifiedAt));
 
   contentEl.classList.remove('flash');
@@ -161,24 +189,24 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
 
 function formatTimestamp(ms: number): string {
   const d = new Date(ms);
-  return `modificado: ${d.toLocaleTimeString()}`;
+  return t('modifiedAt', { time: d.toLocaleTimeString() });
 }
 
 async function openFiles(): Promise<void> {
   try {
-    setStatus('Abrindo...', '');
+    setStatus(t('opening'), '');
     const files = await api.openDialog();
     if (files.length === 0) {
-      setStatus('Cancelado', '');
+      setStatus(t('cancelled'), '');
       return;
     }
     for (const file of files) {
       manager.add(file);
       recordRecentFile(file.filePath);
     }
-    setStatus(`${files.length} arquivo(s) aberto(s)`, 'ok');
+    setStatus(t('openedCount', { n: files.length }), 'ok');
   } catch (err) {
-    setStatus(`Erro: ${errorMessage(err)}`, 'err');
+    setStatus(t('errorPrefix', { msg: errorMessage(err) }), 'err');
   }
 }
 
@@ -191,14 +219,14 @@ function handleFileEvent(event: FileEvent): void {
   switch (event.kind) {
     case 'changed':
       manager.updateContent(event.filePath, event.content, event.modifiedAt);
-      setStatus(`Atualizado: ${basename(event.filePath)}`, 'ok');
+      setStatus(t('updated', { file: basename(event.filePath) }), 'ok');
       break;
     case 'removed':
       manager.closeByPath(event.filePath);
-      setStatus(`Arquivo removido: ${basename(event.filePath)}`, 'warn');
+      setStatus(t('removed', { file: basename(event.filePath) }), 'warn');
       break;
     case 'error':
-      setStatus(`Erro: ${event.message}`, 'err');
+      setStatus(t('errorPrefix', { msg: event.message }), 'err');
       break;
   }
 }
@@ -214,14 +242,14 @@ function errorMessage(err: unknown): string {
 
 async function openPath(filePath: string): Promise<void> {
   try {
-    setStatus(`Abrindo ${basename(filePath)}...`, '');
+    setStatus(t('openingFile', { file: basename(filePath) }), '');
     const file = await api.readFile(filePath);
     manager.add(file);
     recordRecentFile(file.filePath);
-    setStatus(`Arquivo aberto: ${file.fileName}`, 'ok');
+    setStatus(t('openOk', { file: file.fileName }), 'ok');
   } catch (err) {
     removeRecentFile(filePath);
-    setStatus(`Erro ao abrir: ${errorMessage(err)}`, 'err');
+    setStatus(t('openError', { msg: errorMessage(err) }), 'err');
   }
 }
 
@@ -276,7 +304,7 @@ async function openDroppedFile(f: File): Promise<boolean> {
       return true;
     }
   } catch (err) {
-    setStatus(`Erro no drop: ${errorMessage(err)}`, 'err');
+    setStatus(t('dropError', { msg: errorMessage(err) }), 'err');
     return false;
   }
 
@@ -290,10 +318,10 @@ async function openDroppedFile(f: File): Promise<boolean> {
       content,
       modifiedAt: Date.now()
     });
-    setStatus(`Aberto sem monitoramento: ${f.name}`, 'warn');
+    setStatus(t('openedWithoutWatch', { file: f.name }), 'warn');
     return true;
   } catch (err) {
-    setStatus(`Erro ao ler o arquivo solto: ${errorMessage(err)}`, 'err');
+    setStatus(t('readDroppedError', { msg: errorMessage(err) }), 'err');
     return false;
   }
 }
@@ -350,13 +378,13 @@ function bindDragAndDrop(): void {
       try {
         const files = collectDroppedFiles(evt.dataTransfer);
         if (files.length === 0) {
-          setStatus('Nenhum arquivo no drop', 'warn');
+          setStatus(t('noFileInDrop'), 'warn');
           return;
         }
 
         const markdownFiles = files.filter((f) => MARKDOWN_EXT.test(f.name));
         if (markdownFiles.length === 0) {
-          setStatus('Nenhum arquivo Markdown no drop', 'warn');
+          setStatus(t('noMarkdownInDrop'), 'warn');
           return;
         }
 
@@ -365,10 +393,10 @@ function bindDragAndDrop(): void {
           if (await openDroppedFile(f)) opened++;
         }
         if (opened === markdownFiles.length) {
-          setStatus(`${opened} arquivo(s) aberto(s) via drop`, 'ok');
+          setStatus(t('openedViaDrop', { n: opened }), 'ok');
         }
       } catch (err) {
-        setStatus(`Erro no drop: ${errorMessage(err)}`, 'err');
+        setStatus(t('dropError', { msg: errorMessage(err) }), 'err');
       }
     },
     { capture: true }
@@ -394,9 +422,9 @@ function bindCodeCopy(): void {
     const code = btn.closest('.code-block')?.querySelector('code');
     if (!code) return;
     api.copyText(code.textContent ?? '');
-    btn.textContent = 'Copiado!';
+    btn.textContent = t('copied');
     window.setTimeout(() => {
-      btn.textContent = 'Copiar';
+      btn.textContent = t('copy');
     }, 1500);
   });
 }
@@ -405,7 +433,7 @@ function bindCodeCopy(): void {
 function renderRecentMenu(): void {
   const files = getRecentFiles();
   if (files.length === 0) {
-    recentMenu.innerHTML = `<div class="recent-empty">Nenhum arquivo recente</div>`;
+    recentMenu.innerHTML = `<div class="recent-empty">${escapeHtml(t('recentEmpty'))}</div>`;
     return;
   }
   recentMenu.innerHTML = `
@@ -417,7 +445,7 @@ function renderRecentMenu(): void {
         )
         .join('')}
     </ul>
-    <button class="recent-clear" type="button">Limpar histórico</button>
+    <button class="recent-clear" type="button">${escapeHtml(t('clearHistory'))}</button>
   `;
   for (const item of recentMenu.querySelectorAll<HTMLButtonElement>('.recent-menu-item')) {
     item.addEventListener('click', () => {
@@ -482,7 +510,7 @@ function bindUi(): void {
     } else if (isCtrl && evt.shiftKey && evt.key.toLowerCase() === 't') {
       evt.preventDefault();
       toggleTheme();
-    } else if (evt.key === 'Escape' && !recentMenu.hidden) {
+    } else if (evt.key === 'Escape') {
       closeRecentMenu();
     }
   });
@@ -495,11 +523,25 @@ function bindUi(): void {
   bindDragAndDrop();
 }
 
-manager.subscribe((state) => {
-  renderTabbar(state);
-  void renderContent(state);
-});
+async function bootstrap(): Promise<void> {
+  await initI18n({
+    getOsLocale: () => api.getOsLocale(),
+    setLanguage: (lang) => api.setLanguage(lang)
+  });
+  applyStaticStrings();
 
-api.onFileEvent(handleFileEvent);
+  manager.subscribe((state) => {
+    renderTabbar(state);
+    void renderContent(state);
+  });
 
-bindUi();
+  subscribeLang(() => {
+    applyStaticStrings();
+    refreshUi();
+  });
+
+  api.onFileEvent(handleFileEvent);
+  bindUi();
+}
+
+void bootstrap();
