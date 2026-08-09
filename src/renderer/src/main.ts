@@ -217,69 +217,90 @@ function isMarkdownDrag(dt: DataTransfer | null): boolean {
 }
 
 function bindDragAndDrop(): void {
-  // Counter tracks dragenter/dragleave pairs even when crossing child elements.
   let depth = 0;
+  const root = document.documentElement;
 
-  window.addEventListener('dragenter', (evt) => {
-    if (!isMarkdownDrag(evt.dataTransfer)) return;
-    // preventDefault is required to mark this window as a valid drop target.
-    evt.preventDefault();
-    depth++;
-    dropOverlay.classList.add('is-visible');
-  });
-
-  window.addEventListener('dragover', (evt) => {
-    // Always preventDefault on dragover — without this the browser/Electron
-    // shows the "forbidden" cursor and refuses the drop.
-    evt.preventDefault();
-    if (evt.dataTransfer) {
-      evt.dataTransfer.dropEffect = isMarkdownDrag(evt.dataTransfer) ? 'copy' : 'none';
-    }
-  });
-
-  window.addEventListener('dragleave', () => {
-    depth = Math.max(0, depth - 1);
-    if (depth === 0) {
-      dropOverlay.classList.remove('is-visible');
-    }
-  });
-
-  window.addEventListener('drop', async (evt) => {
-    evt.preventDefault();
-    depth = 0;
-    dropOverlay.classList.remove('is-visible');
-
-    const files = evt.dataTransfer?.files;
-    if (!files || files.length === 0) return;
-
-    const paths: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      if (!MARKDOWN_EXT.test(f.name)) continue;
-      try {
-        const path = api.getPathForFile(f);
-        if (path) paths.push(path);
-      } catch (err) {
-        setStatus(`Erro no drop: ${errorMessage(err)}`, 'err');
+  root.addEventListener(
+    'dragenter',
+    (evt) => {
+      const dt = evt.dataTransfer;
+      if (!dt) return;
+      // Always preventDefault when ANY file is being dragged in — this
+      // prevents Electron from navigating to the dropped file.
+      evt.preventDefault();
+      depth++;
+      if (isMarkdownDrag(dt)) {
+        dropOverlay.classList.add('is-visible');
       }
-    }
+    },
+    { capture: true }
+  );
 
-    if (paths.length === 0) {
-      setStatus('Nenhum arquivo Markdown no drop', 'warn');
-      return;
-    }
+  root.addEventListener(
+    'dragover',
+    (evt) => {
+      // preventDefault on EVERY dragover, even when not markdown, so the
+      // browser doesn't reject the drop.
+      evt.preventDefault();
+      if (evt.dataTransfer) {
+        evt.dataTransfer.dropEffect = isMarkdownDrag(evt.dataTransfer) ? 'copy' : 'none';
+      }
+    },
+    { capture: true }
+  );
 
-    for (const p of paths) {
-      await openPath(p);
-    }
-    setStatus(`${paths.length} arquivo(s) aberto(s) via drop`, 'ok');
-  });
+  root.addEventListener(
+    'dragleave',
+    () => {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) dropOverlay.classList.remove('is-visible');
+    },
+    { capture: true }
+  );
 
-  // Reset overlay if the drag is cancelled (e.g. user presses Escape).
-  window.addEventListener('dragend', () => {
-    depth = 0;
-    dropOverlay.classList.remove('is-visible');
-  });
+  root.addEventListener(
+    'drop',
+    async (evt) => {
+      evt.preventDefault();
+      depth = 0;
+      dropOverlay.classList.remove('is-visible');
+
+      const files = evt.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+
+      const paths: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        if (!MARKDOWN_EXT.test(f.name)) continue;
+        try {
+          const path = api.getPathForFile(f);
+          if (path) paths.push(path);
+        } catch (err) {
+          setStatus(`Erro no drop: ${errorMessage(err)}`, 'err');
+        }
+      }
+
+      if (paths.length === 0) {
+        setStatus('Nenhum arquivo Markdown no drop', 'warn');
+        return;
+      }
+
+      for (const p of paths) {
+        await openPath(p);
+      }
+      setStatus(`${paths.length} arquivo(s) aberto(s) via drop`, 'ok');
+    },
+    { capture: true }
+  );
+
+  root.addEventListener(
+    'dragend',
+    () => {
+      depth = 0;
+      dropOverlay.classList.remove('is-visible');
+    },
+    { capture: true }
+  );
 }
 
 function bindUi(): void {

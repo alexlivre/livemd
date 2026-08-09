@@ -869,7 +869,9 @@ body {
   background: rgba(10, 12, 16, 0.55);
   backdrop-filter: blur(4px);
   z-index: 100;
-  pointer-events: none;
+  pointer-events: none !important;
+  user-select: none;
+  -webkit-user-select: none;
   animation: drop-overlay-in 0.15s ease-out;
 }
 

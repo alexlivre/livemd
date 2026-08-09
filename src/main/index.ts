@@ -196,6 +196,16 @@ async function createWindow(): Promise<void> {
   mainWindow.setMenuBarVisibility(false);
   Menu.setApplicationMenu(null);
 
+  // Prevent the renderer from navigating to any file (e.g. an .md dropped
+  // onto the window when dragover's preventDefault didn't fire). When the
+  // drag-drop handlers in the renderer work as intended this is a no-op.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file://')) return;
+    event.preventDefault();
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
