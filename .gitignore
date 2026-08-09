@@ -9,3 +9,4 @@ release/
 .codegraph/
 build/icon.ico
 build/icon.png
+build/installer-header.bmp
