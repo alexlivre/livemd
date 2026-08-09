@@ -24,11 +24,11 @@ Function setAsDefaultPageCreate
   Pop $0
   SetCtlColors $0 "" "ffffff"
 
-  ${NSD_CreateLabel} 0 0 100% 20u "Aplicativo padrão"
+  ${NSD_CreateLabel} 12u 8u 100% 20u "Aplicativo padrão"
   Pop $0
   SetCtlColors $0 "2563eb" "ffffff"
 
-  ${NSD_CreateLabel} 0 24u 100% 20u "LiveMD pode ser definido como leitor padrão"
+  ${NSD_CreateLabel} 12u 30u 100% 20u "LiveMD pode ser definido como leitor padrão"
   Pop $0
   SetCtlColors $0 "1a1d23" "ffffff"
 
@@ -43,11 +43,11 @@ Function setAsDefaultPageCreate
   StrCpy $SetAsDefaultConflict 1
 setAsDefaultNoConflict:
 
-  ${NSD_CreateLabel} 0 56u 100% 60u ""
+  ${NSD_CreateLabel} 12u 58u 100% 70u ""
   Pop $SetAsDefaultLabel
   SetCtlColors $SetAsDefaultLabel "4a5260" "ffffff"
 
-  ${NSD_CreateCheckbox} 0 126u 100% 20u "Sim, tornar padrão para .md e .markdown"
+  ${NSD_CreateCheckbox} 12u 140u 100% 20u "Sim, tornar padrão para .md e .markdown"
   Pop $SetAsDefaultCheckbox
 
   ${If} $SetAsDefaultConflict == 1
