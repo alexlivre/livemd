@@ -444,7 +444,9 @@ body {
    ============================================================ */
 .tabbar {
   display: flex;
-  align-items: stretch;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 5px 8px 0;
   background: var(--bg-tabbar);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
@@ -465,7 +467,8 @@ body {
 
 .tabs {
   display: flex;
-  align-items: stretch;
+  align-items: flex-end;
+  gap: 3px;
   min-width: 0;
   flex: 1;
 }
@@ -473,30 +476,35 @@ body {
 .tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  flex-shrink: 0;
   min-width: 120px;
   max-width: 220px;
-  padding: 0 10px 0 14px;
-  border-right: 1px solid var(--border);
-  background: transparent;
+  height: 29px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: var(--bg-tab-hover);
   color: var(--text-dim);
   cursor: pointer;
   position: relative;
   font-size: 12.5px;
   font-family: inherit;
-  transition: background 0.12s, color 0.12s;
-  border-top: 2px solid transparent;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 .tab:hover {
-  background: var(--bg-tab-hover);
+  background: var(--bg-tab-active);
   color: var(--text);
 }
 
 .tab.is-active {
-  background: var(--bg-tab-active);
+  background: var(--bg-content);
   color: var(--text);
-  border-top-color: var(--accent);
+  border-color: transparent;
+  margin-bottom: -1px;
+  box-shadow: inset 0 2px 0 0 var(--accent);
 }
 
 .tab.is-dirty .tab-title::after {
@@ -517,9 +525,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -530,7 +538,11 @@ body {
 
 .tab-close:hover {
   background: var(--border-strong);
-  color: var(--text);
+  color: var(--text-strong);
+}
+
+.tab:hover .tab-close {
+  color: var(--text-dim);
 }
 
 .tab.is-active .tab-close {
@@ -541,12 +553,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  background: transparent;
+  width: 29px;
+  height: 29px;
   border: none;
-  border-left: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
   color: var(--text-dim);
-  font-size: 18px;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
   flex-shrink: 0;
@@ -554,7 +566,7 @@ body {
 
 .tab-new:hover {
   background: var(--bg-tab-hover);
-  color: var(--text);
+  color: var(--text-strong);
 }
 
 /* ============================================================
