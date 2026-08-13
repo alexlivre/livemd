@@ -49,7 +49,6 @@ jobs:
         with:
           name: livemd-unsigned-${{ github.ref_name }}
           path: release/LiveMD-Setup-*.exe
-          archive: false
 
       - name: Submit signing request to SignPath
         id: signpath
