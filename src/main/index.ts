@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
-import chokidar, { type FSWatcher } from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
 import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES } from '@shared/constants';
 import { parseVersion, versionsDiffer } from '@shared/version';
@@ -12,6 +12,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const watched = new Map<string, FSWatcher>();
 const readablePaths = new Set<string>();
+
+let chokidarPromise: Promise<typeof import('chokidar')> | null = null;
+
+function getChokidar(): Promise<typeof import('chokidar')> {
+  chokidarPromise ??= import('chokidar');
+  return chokidarPromise;
+}
 let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
 
@@ -96,7 +103,10 @@ async function readMarkdownFile(filePath: string) {
   return { content, modifiedAt: stat.mtimeMs };
 }
 
-function watchFile(filePath: string, win: BrowserWindow): void {
+async function watchFile(filePath: string, win: BrowserWindow): Promise<void> {
+  if (watched.has(filePath)) return;
+
+  const chokidar = await getChokidar();
   if (watched.has(filePath)) return;
 
   const watcher = chokidar.watch(filePath, {
@@ -191,7 +201,7 @@ function registerIpc(win: BrowserWindow): void {
           content,
           modifiedAt
         });
-        watchFile(filePath, win);
+        await watchFile(filePath, win);
         trustPath(filePath);
       } catch (err) {
         dialog.showErrorBox(
@@ -209,7 +219,7 @@ function registerIpc(win: BrowserWindow): void {
     if (!readablePaths.has(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
     if (!isMarkdown(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
     const { content, modifiedAt } = await readMarkdownFile(resolved);
-    watchFile(resolved, win);
+    await watchFile(resolved, win);
     return {
       filePath: resolved,
       fileName: path.basename(resolved),
