@@ -99,6 +99,10 @@ function applyStaticStrings(): void {
     const key = el.dataset.i18nAria as MsgKey | undefined;
     if (key && key in MESSAGES.en) el.setAttribute('aria-label', t(key));
   }
+  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n-placeholder]')) {
+    const key = el.dataset.i18nPlaceholder as MsgKey | undefined;
+    if (key && key in MESSAGES.en) el.setAttribute('placeholder', t(key));
+  }
   btnAbout.title = updateVersion ? t('updateAvailable', { v: updateVersion }) : t('aboutTooltip');
 }
 
@@ -437,12 +441,14 @@ function bindAbout(): void {
 
 function openSearch(): void {
   searchbar.hidden = false;
+  fabOpen.hidden = true;
   searchInput.focus();
   searchInput.select();
 }
 
 function closeSearch(): void {
   searchbar.hidden = true;
+  fabOpen.hidden = false;
   void api.stopFind();
   searchCount.textContent = '';
 }

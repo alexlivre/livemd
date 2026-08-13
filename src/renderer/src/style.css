@@ -159,7 +159,7 @@ body {
 
 #app {
   display: grid;
-  grid-template-rows: 36px 38px 1fr 24px;
+  grid-template-rows: 36px 38px 1fr auto 24px;
   height: 100vh;
 }
 
@@ -975,6 +975,7 @@ body {
    Statusbar
    ============================================================ */
 .statusbar {
+  grid-row: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1076,6 +1077,10 @@ body {
 
 .fab:active {
   transform: translateY(0);
+}
+
+.fab[hidden] {
+  display: none;
 }
 
 .fab svg {
@@ -1323,32 +1328,70 @@ body {
 
 /* In-document search bar (Ctrl+F) */
 .searchbar {
+  grid-row: 4;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: 4px;
+  padding: 6px 12px;
   background: var(--bg-elevated);
-  border-top: 1px solid var(--bg-tab-hover);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
 }
 
 .searchbar[hidden] {
   display: none;
 }
 
-.searchbar input {
+.search-field {
   flex: 1;
-  padding: 6px 10px;
-  border: 1px solid var(--bg-tab-hover);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg-content);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.search-field input {
+  flex: 1;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--text);
   font-family: inherit;
   font-size: 13px;
+  outline: none;
+}
+
+.search-field input::placeholder {
+  color: var(--text-muted);
 }
 
 .search-count {
   font-size: 12px;
   color: var(--text-muted);
-  min-width: 40px;
+  min-width: 48px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.search-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--border);
 }

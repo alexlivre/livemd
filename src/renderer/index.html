@@ -146,11 +146,30 @@
       </div>
 
       <div id="searchbar" class="searchbar" hidden>
-        <input id="search-input" type="text" data-i18n-aria="searchPlaceholder" placeholder="Buscar" />
+        <div class="search-field">
+          <svg class="search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input id="search-input" type="text" data-i18n-aria="searchPlaceholder" data-i18n-placeholder="searchPlaceholder" placeholder="Buscar" />
+        </div>
         <span id="search-count" class="search-count"></span>
-        <button id="search-prev" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchPrev">↑</button>
-        <button id="search-next" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchNext">↓</button>
-        <button id="search-close" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchClose">×</button>
+        <button id="search-prev" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchPrev">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+        <button id="search-next" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchNext">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        <span class="search-divider" aria-hidden="true"></span>
+        <button id="search-close" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchClose">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       <footer id="statusbar" class="statusbar">
