@@ -547,6 +547,14 @@ async function bootstrap(): Promise<void> {
   });
   applyStaticStrings();
 
+  void checkForUpdate(api, {
+    onUpdate: (v) => {
+      updateVersion = v;
+      applyStaticStrings();
+      btnAbout.classList.add('has-update');
+    }
+  });
+
   manager.subscribe((state) => {
     renderTabbar(state);
     void renderContent(state);
@@ -571,14 +579,6 @@ async function bootstrap(): Promise<void> {
   );
 
   await restoreSession();
-
-  void checkForUpdate(api, {
-    onUpdate: (v) => {
-      updateVersion = v;
-      applyStaticStrings();
-      btnAbout.classList.add('has-update');
-    }
-  });
 }
 
 void bootstrap();
