@@ -52,4 +52,26 @@ describe('TabManager', () => {
     expect(m.getState().tabs).toHaveLength(0);
     expect(m.getState().activeId).toBeNull();
   });
+
+  it('addMany adds all tabs and emits a single update', () => {
+    const m = new TabManager();
+    let emissions = 0;
+    m.subscribe(() => {
+      emissions += 1;
+    });
+    const added = m.addMany([file('/a.md'), file('/b.md'), file('/c.md')]);
+    expect(added).toHaveLength(3);
+    expect(m.getState().tabs).toHaveLength(3);
+    expect(m.getState().activeId).toBe(added[2].id);
+    expect(emissions).toBe(2);
+  });
+
+  it('addMany reuses existing tabs for repeated paths', () => {
+    const m = new TabManager();
+    m.add(file('/a.md'));
+    const added = m.addMany([file('/a.md', '# changed'), file('/b.md')]);
+    expect(m.getState().tabs).toHaveLength(2);
+    expect(m.getState().tabs[0].content).toBe('# changed');
+    expect(added[0].id).toBe(m.getState().tabs[0].id);
+  });
 });

@@ -11,6 +11,13 @@ export interface TabState {
   activeId: string | null;
 }
 
+export interface OpenTabInput {
+  filePath: string;
+  fileName: string;
+  content: string;
+  modifiedAt: number;
+}
+
 export class TabManager {
   private tabs: TabData[] = [];
   private activeId: string | null = null;
@@ -35,27 +42,34 @@ export class TabManager {
     return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   }
 
-  add(file: { filePath: string; fileName: string; content: string; modifiedAt: number }): TabData {
-    const existing = this.tabs.find((t) => t.filePath === file.filePath);
-    if (existing) {
-      existing.content = file.content;
-      existing.modifiedAt = file.modifiedAt;
-      this.activeId = existing.id;
-      this.emit();
-      return existing;
-    }
+  add(file: OpenTabInput): TabData {
+    return this.addMany([file])[0];
+  }
 
-    const tab: TabData = {
-      id: this.nextId(),
-      filePath: file.filePath,
-      fileName: file.fileName,
-      content: file.content,
-      modifiedAt: file.modifiedAt
-    };
-    this.tabs.push(tab);
-    this.activeId = tab.id;
+  addMany(files: OpenTabInput[]): TabData[] {
+    const added: TabData[] = [];
+    for (const file of files) {
+      const existing = this.tabs.find((t) => t.filePath === file.filePath);
+      if (existing) {
+        existing.content = file.content;
+        existing.modifiedAt = file.modifiedAt;
+        added.push(existing);
+      } else {
+        added.push({
+          id: this.nextId(),
+          filePath: file.filePath,
+          fileName: file.fileName,
+          content: file.content,
+          modifiedAt: file.modifiedAt
+        });
+      }
+    }
+    for (const tab of added) {
+      if (!this.tabs.includes(tab)) this.tabs.push(tab);
+    }
+    if (added.length > 0) this.activeId = added[added.length - 1].id;
     this.emit();
-    return tab;
+    return added;
   }
 
   updateContent(filePath: string, content: string, modifiedAt: number): void {

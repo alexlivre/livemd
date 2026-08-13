@@ -319,14 +319,32 @@ function snapshotSession(): void {
 async function restoreSession(): Promise<void> {
   const session = loadSession();
   if (!session || session.tabs.length === 0) return;
-  for (const tab of session.tabs) {
-    await openPath(tab.filePath);
+
+  const results = await Promise.allSettled(
+    session.tabs.map(async (tab) => {
+      await api.allowRead(tab.filePath);
+      return api.readFile(tab.filePath);
+    })
+  );
+
+  const files: Awaited<ReturnType<typeof api.readFile>>[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      files.push(result.value);
+      recordRecentFile(result.value.filePath);
+    }
   }
+
+  if (files.length === 0) return;
+
+  manager.addMany(files);
+
   if (session.activePath) {
     const state = manager.getState();
     const target = state.tabs.find((t) => t.filePath === session.activePath);
     if (target) manager.activate(target.id);
   }
+
   const savedScroll = session.tabs.find((t) => t.filePath === session.activePath)?.scrollTop ?? 0;
   if (savedScroll > 0) {
     pendingScrollTop = savedScroll;
