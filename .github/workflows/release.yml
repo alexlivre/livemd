@@ -1,8 +1,7 @@
 name: Release
 
-# Builds the Windows installer on GitHub-hosted runners (required by SignPath
-# for OSS origin verification), submits it to SignPath for code signing and
-# publishes the signed installer to the GitHub Release of the pushed tag.
+# Builds the Windows installer on GitHub-hosted runners and publishes the
+# unsigned installer to the GitHub Release of the pushed tag.
 
 on:
   push:
@@ -14,7 +13,7 @@ permissions:
   actions: read
 
 jobs:
-  build-and-sign:
+  build:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -35,36 +34,15 @@ jobs:
       - name: Generate icons and installer header
         run: npm run build:icon
 
-      # Unsigned build on purpose — SignPath signs the installer afterwards.
-      # CSC_IDENTITY_AUTO_DISCOVERY=false keeps electron-builder from picking
-      # up any certificate found in the runner's store.
-      - name: Build unsigned installer
+      # Unsigned build — CSC_IDENTITY_AUTO_DISCOVERY=false keeps electron-builder
+      # from picking up any certificate found in the runner's store.
+      - name: Build installer
         run: npx electron-builder --win --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
-      - name: Upload unsigned installer
-        id: upload-unsigned
-        uses: actions/upload-artifact@v4
-        with:
-          name: livemd-unsigned-${{ github.ref_name }}
-          path: release/LiveMD-Setup-*.exe
-
-      - name: Submit signing request to SignPath
-        id: signpath
-        uses: signpath/github-action-submit-signing-request@v2
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORG_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
-          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 900
-          output-artifact-directory: release-signed
-
-      - name: Publish signed installer to GitHub Release
+      - name: Publish installer to GitHub Release
         run: |
-          gh release upload "${{ github.ref_name }}" release-signed/LiveMD-Setup-*.exe --clobber
+          gh release upload "${{ github.ref_name }}" release/LiveMD-Setup-*.exe --clobber
         env:
           GH_TOKEN: ${{ github.token }}

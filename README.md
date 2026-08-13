@@ -340,7 +340,7 @@ LiveMD is a local, read-only viewer, and it's built defensively:
 
 ## Code signing policy
 
-LiveMD applies for free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (pending). Full policy, team roles and privacy statement: [CODE_SIGNING_POLICY.md](./CODE_SIGNING_POLICY.md).
+LiveMD installers are currently **unsigned** — Windows SmartScreen may show an "Unknown publisher" warning on first run. Full policy and privacy statement: [CODE_SIGNING_POLICY.md](./CODE_SIGNING_POLICY.md).
 
 ## Contributing
 
