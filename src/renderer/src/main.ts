@@ -2,7 +2,6 @@ import type { FileEvent } from '@shared/types';
 import type { MdApi } from '@shared/api';
 import { MESSAGES, type MsgKey } from '@shared/i18n';
 import { TabManager, type TabData } from './tabs';
-import { renderMarkdown } from './markdown';
 import { initTheme, toggleTheme } from './theme';
 import { RenderCache } from './renderCache';
 import { getRecentFiles, recordRecentFile, removeRecentFile } from './recent';
@@ -69,6 +68,13 @@ let pendingScrollTop: number | null = null;
 let lastFocused: HTMLElement | null = null;
 let recentPopover: Popover;
 let langPopover: Popover;
+
+let markdownPromise: Promise<typeof import('./markdown')> | null = null;
+
+function getMarkdown(): Promise<typeof import('./markdown')> {
+  markdownPromise ??= import('./markdown');
+  return markdownPromise;
+}
 
 function setStatus(text: string, kind: 'ok' | 'warn' | 'err' | '' = ''): void {
   statusLeft.textContent = text;
@@ -211,6 +217,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
 
   let html = renderCache.get(active.filePath, active.content);
   if (html === null) {
+    const { renderMarkdown } = await getMarkdown();
     html = await renderMarkdown(active.content);
     renderCache.set(active.filePath, active.content, html);
   }
