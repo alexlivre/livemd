@@ -27,11 +27,9 @@ npm run dist:win     # build + icon + NSIS installer (release/LiveMD-Setup-1.0.0
 
 ## Release & code signing
 
-- `.github/workflows/release.yml` fires on tag push (`v*`): builds unsigned on `windows-latest`, uploads the installer, submits it to SignPath (`signpath/github-action-submit-signing-request@v2`) and publishes the signed exe with `gh release upload --clobber`.
-- Reads `secrets.SIGNPATH_API_TOKEN` + `vars.SIGNPATH_ORG_ID/PROJECT_SLUG/POLICY_SLUG` — not yet configured (SignPath Foundation application pending).
-- `.signpath/policies/livemd/release-signing.yml` must be renamed to the real `<project-slug>/<signing-policy-slug>.yml` after approval; `CODEOWNERS` locks that directory.
-- SignPath requires GitHub-hosted runners and unsigned artifacts (do NOT configure `win.certificateFile`/`CSC_*`).
-- Release bodies must mention "Free code signing provided by SignPath.io, certificate by SignPath Foundation" (see `CODE_SIGNING_POLICY.md`).
+- `.github/workflows/release.yml` fires on tag push (`v*`): builds the Windows installer on `windows-latest` (unsigned — `CSC_IDENTITY_AUTO_DISCOVERY=false`) and publishes it to the GitHub Release with `gh release upload --clobber`.
+- Installers are **unsigned** (SignPath Foundation application was rejected). Windows SmartScreen shows an "Unknown publisher" warning; code signing is a future goal once a certificate is available. See `CODE_SIGNING_POLICY.md`.
+- Do NOT configure `win.certificateFile`/`CSC_*` — the release workflow intentionally builds unsigned.
 
 ## Hard-earned gotchas
 
