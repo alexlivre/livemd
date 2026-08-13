@@ -1,19 +1,19 @@
 import type { FileEvent } from '@shared/types';
 import type { MdApi } from '@shared/api';
-import { MESSAGES, LANG_OPTIONS, type MsgKey } from '@shared/i18n';
+import { MESSAGES, type MsgKey } from '@shared/i18n';
 import { TabManager, type TabData } from './tabs';
 import { renderMarkdown } from './markdown';
 import { initTheme, toggleTheme } from './theme';
-import { clearRecentFiles, getRecentFiles, recordRecentFile, removeRecentFile } from './recent';
-import {
-  getEffectiveLang,
-  getOsLangLabel,
-  getOverride,
-  initI18n,
-  setOverride,
-  subscribe as subscribeLang,
-  t
-} from './i18n';
+import { RenderCache } from './renderCache';
+import { getRecentFiles, recordRecentFile, removeRecentFile } from './recent';
+import { getEffectiveLang, initI18n, subscribe as subscribeLang, t } from './i18n';
+import { basename, errorMessage, escapeAttr, escapeHtml } from './util';
+import { bindDragAndDrop } from './drop';
+import { bindShortcuts } from './shortcuts';
+import { bindRecentMenu, bindLangMenu, type Popover } from './menus';
+import { checkForUpdate } from './update';
+import { saveSession, loadSession } from './session';
+import { debounce } from '@shared/util';
 
 declare global {
   interface Window {
@@ -44,16 +44,31 @@ const aboutRepoLink = document.getElementById('about-repo-link') as HTMLButtonEl
 const aboutUpdate = document.getElementById('about-update') as HTMLDivElement;
 const aboutUpdateText = document.getElementById('about-update-text') as HTMLParagraphElement;
 const aboutUpdateBtn = document.getElementById('about-update-btn') as HTMLButtonElement;
+const searchbar = document.getElementById('searchbar') as HTMLDivElement;
+const searchInput = document.getElementById('search-input') as HTMLInputElement;
+const searchCount = document.getElementById('search-count') as HTMLSpanElement;
+const searchPrev = document.getElementById('search-prev') as HTMLButtonElement;
+const searchNext = document.getElementById('search-next') as HTMLButtonElement;
+const searchClose = document.getElementById('search-close') as HTMLButtonElement;
 
 const REPO_URL = 'https://github.com/alexlivre/livemd';
 const REPO_RELEASES_URL = `${REPO_URL}/releases`;
 
-const UPDATE_CHECK_KEY = 'md-reader.update-check';
 let updateVersion: string | null = null;
 const fabOpen = document.getElementById('fab-open') as HTMLButtonElement;
-const dropOverlay = document.getElementById('drop-overlay') as HTMLDivElement;
+
+let zoomFactor = 1;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.0;
+const ZOOM_STEP = 0.1;
 
 const manager = new TabManager();
+const renderCache = new RenderCache();
+const scrollByPath = new Map<string, number>();
+let pendingScrollTop: number | null = null;
+let lastFocused: HTMLElement | null = null;
+let recentPopover: Popover;
+let langPopover: Popover;
 
 function setStatus(text: string, kind: 'ok' | 'warn' | 'err' | '' = ''): void {
   statusLeft.textContent = text;
@@ -95,7 +110,10 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
     el.className = 'tab';
     el.setAttribute('role', 'tab');
     el.setAttribute('data-tab-id', tab.id);
-    if (tab.id === state.activeId) el.classList.add('is-active');
+    const isActive = tab.id === state.activeId;
+    if (isActive) el.classList.add('is-active');
+    el.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    el.tabIndex = isActive ? 0 : -1;
 
     const title = document.createElement('span');
     title.className = 'tab-title';
@@ -131,15 +149,8 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
   }
 }
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function escapeAttr(text: string): string {
-  return escapeHtml(text).replace(/"/g, '&quot;');
-}
-
 function renderEmpty(): void {
+  document.title = 'LiveMD';
   const recent = getRecentFiles();
   const recentHtml =
     recent.length > 0
@@ -198,11 +209,21 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
     return;
   }
 
-  const html = await renderMarkdown(active.content);
+  let html = renderCache.get(active.filePath, active.content);
+  if (html === null) {
+    html = await renderMarkdown(active.content);
+    renderCache.set(active.filePath, active.content, html);
+  }
   contentEl.innerHTML = `<article class="markdown-body">${html}</article>`;
+
+  if (pendingScrollTop !== null) {
+    contentEl.scrollTop = pendingScrollTop;
+    pendingScrollTop = null;
+  }
 
   setStatus(t('reading', { file: active.fileName }), 'ok');
   setStatusRight(formatTimestamp(active.modifiedAt));
+  document.title = `${active.fileName} — LiveMD`;
 
   contentEl.classList.remove('flash');
   void contentEl.offsetWidth;
@@ -211,7 +232,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
 
 function formatTimestamp(ms: number): string {
   const d = new Date(ms);
-  return t('modifiedAt', { time: d.toLocaleTimeString() });
+  return t('modifiedAt', { time: d.toLocaleTimeString(getEffectiveLang()) });
 }
 
 async function openFiles(): Promise<void> {
@@ -234,7 +255,10 @@ async function openFiles(): Promise<void> {
 
 async function onCloseTab(id: string): Promise<void> {
   const removedPath = manager.close(id);
-  if (removedPath) await api.closeTab(removedPath);
+  if (removedPath) {
+    renderCache.delete(removedPath);
+    await api.closeTab(removedPath);
+  }
 }
 
 function handleFileEvent(event: FileEvent): void {
@@ -245,6 +269,7 @@ function handleFileEvent(event: FileEvent): void {
       break;
     case 'removed':
       manager.closeByPath(event.filePath);
+      renderCache.delete(event.filePath);
       setStatus(t('removed', { file: basename(event.filePath) }), 'warn');
       break;
     case 'error':
@@ -253,18 +278,10 @@ function handleFileEvent(event: FileEvent): void {
   }
 }
 
-function basename(filePath: string): string {
-  const parts = filePath.split(/[\\/]/);
-  return parts[parts.length - 1] ?? filePath;
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 async function openPath(filePath: string): Promise<void> {
   try {
     setStatus(t('openingFile', { file: basename(filePath) }), '');
+    await api.allowRead(filePath);
     const file = await api.readFile(filePath);
     manager.add(file);
     recordRecentFile(file.filePath);
@@ -282,156 +299,32 @@ async function consumePending(): Promise<void> {
   }
 }
 
-// ---- Drag & drop ----
-const MARKDOWN_EXT = /\.(md|markdown|mdown|mkd|mdx)$/i;
-
-// On file:// pages (packaged builds) the DataTransfer stays in protected mode
-// during dragenter/dragover: item kinds are enumerable, but getAsFile()
-// returns null and files is empty. Only inspect kinds here so the drop is
-// never rejected; extension filtering happens in the drop handler.
-function hasDraggedFiles(dt: DataTransfer | null): boolean {
-  if (!dt) return false;
-  if (dt.items && dt.items.length > 0) {
-    for (let i = 0; i < dt.items.length; i++) {
-      if (dt.items[i].kind === 'file') return true;
-    }
-    return false;
-  }
-  return dt.files.length > 0;
+function snapshotSession(): void {
+  const state = manager.getState();
+  const tabs = state.tabs.map((tab) => ({
+    filePath: tab.filePath,
+    scrollTop: scrollByPath.get(tab.filePath) ?? 0
+  }));
+  const active = state.activeId ? state.tabs.find((t) => t.id === state.activeId) : null;
+  saveSession({ tabs, activePath: active ? active.filePath : null });
 }
 
-function collectDroppedFiles(dt: DataTransfer | null): File[] {
-  const files: File[] = [];
-  if (!dt) return files;
-  if (dt.files.length > 0) {
-    for (let i = 0; i < dt.files.length; i++) files.push(dt.files[i]);
-    return files;
+async function restoreSession(): Promise<void> {
+  const session = loadSession();
+  if (!session || session.tabs.length === 0) return;
+  for (const tab of session.tabs) {
+    await openPath(tab.filePath);
   }
-  if (dt.items) {
-    for (let i = 0; i < dt.items.length; i++) {
-      const item = dt.items[i];
-      if (item.kind !== 'file') continue;
-      const f = item.getAsFile();
-      if (f) files.push(f);
-    }
+  if (session.activePath) {
+    const state = manager.getState();
+    const target = state.tabs.find((t) => t.filePath === session.activePath);
+    if (target) manager.activate(target.id);
   }
-  return files;
-}
-
-async function openDroppedFile(f: File): Promise<boolean> {
-  try {
-    const path = api.getPathForFile(f);
-    if (path) {
-      await openPath(path);
-      return true;
-    }
-  } catch (err) {
-    setStatus(t('dropError', { msg: errorMessage(err) }), 'err');
-    return false;
+  const savedScroll = session.tabs.find((t) => t.filePath === session.activePath)?.scrollTop ?? 0;
+  if (savedScroll > 0) {
+    pendingScrollTop = savedScroll;
+    void renderContent(manager.getState());
   }
-
-  // No real path available — read the content directly and open a tab
-  // without file watching.
-  try {
-    const content = await f.text();
-    manager.add({
-      filePath: `drop://${f.name}`,
-      fileName: f.name,
-      content,
-      modifiedAt: Date.now()
-    });
-    setStatus(t('openedWithoutWatch', { file: f.name }), 'warn');
-    return true;
-  } catch (err) {
-    setStatus(t('readDroppedError', { msg: errorMessage(err) }), 'err');
-    return false;
-  }
-}
-
-function bindDragAndDrop(): void {
-  let depth = 0;
-  const root = document.documentElement;
-
-  root.addEventListener(
-    'dragenter',
-    (evt) => {
-      const dt = evt.dataTransfer;
-      if (!dt) return;
-      // Always preventDefault when ANY file is being dragged in — this
-      // prevents Electron from navigating to the dropped file.
-      evt.preventDefault();
-      depth++;
-      if (hasDraggedFiles(dt)) {
-        dropOverlay.classList.add('is-visible');
-      }
-    },
-    { capture: true }
-  );
-
-  root.addEventListener(
-    'dragover',
-    (evt) => {
-      // preventDefault on EVERY dragover, even when not markdown, so the
-      // browser doesn't reject the drop.
-      evt.preventDefault();
-      if (evt.dataTransfer) {
-        evt.dataTransfer.dropEffect = hasDraggedFiles(evt.dataTransfer) ? 'copy' : 'none';
-      }
-    },
-    { capture: true }
-  );
-
-  root.addEventListener(
-    'dragleave',
-    () => {
-      depth = Math.max(0, depth - 1);
-      if (depth === 0) dropOverlay.classList.remove('is-visible');
-    },
-    { capture: true }
-  );
-
-  root.addEventListener(
-    'drop',
-    async (evt) => {
-      evt.preventDefault();
-      depth = 0;
-      dropOverlay.classList.remove('is-visible');
-
-      try {
-        const files = collectDroppedFiles(evt.dataTransfer);
-        if (files.length === 0) {
-          setStatus(t('noFileInDrop'), 'warn');
-          return;
-        }
-
-        const markdownFiles = files.filter((f) => MARKDOWN_EXT.test(f.name));
-        if (markdownFiles.length === 0) {
-          setStatus(t('noMarkdownInDrop'), 'warn');
-          return;
-        }
-
-        let opened = 0;
-        for (const f of markdownFiles) {
-          if (await openDroppedFile(f)) opened++;
-        }
-        if (opened === markdownFiles.length) {
-          setStatus(t('openedViaDrop', { n: opened }), 'ok');
-        }
-      } catch (err) {
-        setStatus(t('dropError', { msg: errorMessage(err) }), 'err');
-      }
-    },
-    { capture: true }
-  );
-
-  root.addEventListener(
-    'dragend',
-    () => {
-      depth = 0;
-      dropOverlay.classList.remove('is-visible');
-    },
-    { capture: true }
-  );
 }
 
 // ---- Code copy (event delegation on the content container) ----
@@ -451,80 +344,20 @@ function bindCodeCopy(): void {
   });
 }
 
-// ---- Recent files (titlebar dropdown) ----
-function renderRecentMenu(): void {
-  const files = getRecentFiles();
-  if (files.length === 0) {
-    recentMenu.innerHTML = `<div class="recent-empty">${escapeHtml(t('recentEmpty'))}</div>`;
-    return;
-  }
-  recentMenu.innerHTML = `
-    <ul class="recent-menu-list">
-      ${files
-        .map(
-          (p) =>
-            `<li><button class="recent-menu-item" type="button" data-path="${escapeAttr(p)}" title="${escapeAttr(p)}"><span class="recent-menu-name">${escapeHtml(basename(p))}</span><span class="recent-menu-path">${escapeHtml(p)}</span></button></li>`
-        )
-        .join('')}
-    </ul>
-    <button class="recent-clear" type="button">${escapeHtml(t('clearHistory'))}</button>
-  `;
-  for (const item of recentMenu.querySelectorAll<HTMLButtonElement>('.recent-menu-item')) {
-    item.addEventListener('click', () => {
-      closeRecentMenu();
-      const path = item.dataset.path;
-      if (path) void openPath(path);
-    });
-  }
-  recentMenu.querySelector('.recent-clear')?.addEventListener('click', () => {
-    clearRecentFiles();
-    renderRecentMenu();
+// ---- Markdown link handling (event delegation on the content container) ----
+function bindContentLinks(): void {
+  contentEl.addEventListener('click', (evt) => {
+    const target = evt.target as HTMLElement | null;
+    if (!target) return;
+    const anchor = target.closest<HTMLAnchorElement>('a[href]');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href') ?? '';
+    if (href.startsWith('#')) return;
+    evt.preventDefault();
+    if (/^(https?:|mailto:)/i.test(href)) {
+      void api.openExternal(href);
+    }
   });
-}
-
-function closeRecentMenu(): void {
-  recentMenu.hidden = true;
-  btnRecent.classList.remove('is-active');
-}function renderLangMenu(): void {
-  const items: Array<{ value: 'auto' | 'pt' | 'en' | 'es'; label: string }> = [
-    { value: 'auto', label: t('langAuto', { lang: getOsLangLabel() }) },
-    ...LANG_OPTIONS
-  ];
-  langMenu.innerHTML = `
-    <div class="lang-menu-title">${escapeHtml(t('langMenuTitle'))}</div>
-    <ul class="recent-menu-list">
-      ${items
-        .map(
-          (item) =>
-            `<li><button class="lang-menu-item ${item.value === getOverride() ? 'is-active' : ''}" type="button" data-value="${item.value}"><span class="lang-check" aria-hidden="true">✓</span><span class="recent-menu-name">${escapeHtml(item.label)}</span></button></li>`
-        )
-        .join('')}
-    </ul>
-  `;
-  for (const item of langMenu.querySelectorAll<HTMLButtonElement>('.lang-menu-item')) {
-    item.addEventListener('click', () => {
-      const value = item.dataset.value;
-      if (value === 'auto' || value === 'pt' || value === 'en' || value === 'es') {
-        closeLangMenu();
-        if (value !== getOverride()) setOverride(value);
-      }
-    });
-  }
-}
-
-function closeLangMenu(): void {
-  langMenu.hidden = true;
-  btnLang.classList.remove('is-active');
-}
-
-function toggleLangMenu(): void {
-  if (langMenu.hidden) {
-    renderLangMenu();
-    langMenu.hidden = false;
-    btnLang.classList.add('is-active');
-  } else {
-    closeLangMenu();
-  }
 }
 
 async function openAbout(): Promise<void> {
@@ -538,58 +371,98 @@ async function openAbout(): Promise<void> {
     aboutUpdate.hidden = true;
   }
   aboutModal.hidden = false;
+  aboutCloseBtn.focus();
 }
 
 function closeAbout(): void {
+  if (aboutModal.hidden) return;
   aboutModal.hidden = true;
+  if (lastFocused) lastFocused.focus();
 }
 
 function bindAbout(): void {
-  btnAbout.addEventListener('click', () => void openAbout());
+  btnAbout.addEventListener('click', () => {
+    lastFocused = btnAbout;
+    void openAbout();
+  });
   aboutCloseBtn.addEventListener('click', closeAbout);
   aboutRepoLink.addEventListener('click', () => void api.openExternal(REPO_URL));
   aboutUpdateBtn.addEventListener('click', () => void api.openExternal(REPO_RELEASES_URL));
   aboutModal.addEventListener('click', (evt) => {
     if (evt.target === aboutModal) closeAbout();
   });
+  aboutModal.addEventListener('keydown', (evt) => {
+    if (evt.key !== 'Tab') return;
+    const focusable = aboutModal.querySelectorAll<HTMLElement>(
+      'button, a[href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (evt.shiftKey && active === first) {
+      evt.preventDefault();
+      last.focus();
+    } else if (!evt.shiftKey && active === last) {
+      evt.preventDefault();
+      first.focus();
+    }
+  });
 }
 
-function bindLangMenu(): void {
-  btnLang.addEventListener('click', (evt) => {
-    evt.stopPropagation();
-    toggleLangMenu();
-  });
+function openSearch(): void {
+  searchbar.hidden = false;
+  searchInput.focus();
+  searchInput.select();
+}
 
-  document.addEventListener('click', (evt) => {
-    if (langMenu.hidden) return;
-    const target = evt.target as Node | null;
-    if (target && langMenu.contains(target)) return;
-    closeLangMenu();
+function closeSearch(): void {
+  searchbar.hidden = true;
+  void api.stopFind();
+  searchCount.textContent = '';
+}
+
+function runSearch(findNext: boolean, forward: boolean): void {
+  const text = searchInput.value;
+  if (!text) return;
+  void api.findInPage(text, { findNext, forward });
+}
+
+function bindSearch(): void {
+  searchInput.addEventListener('input', () => runSearch(true, true));
+  searchInput.addEventListener('keydown', (evt) => {
+    if (evt.key === 'Enter') {
+      evt.preventDefault();
+      runSearch(false, evt.shiftKey ? false : true);
+    } else if (evt.key === 'Escape') {
+      closeSearch();
+    }
+  });
+  searchPrev.addEventListener('click', () => runSearch(false, false));
+  searchNext.addEventListener('click', () => runSearch(false, true));
+  searchClose.addEventListener('click', closeSearch);
+  api.onFoundInPage((result) => {
+    const total = result.matches;
+    const current = result.activeMatchOrdinal;
+    searchCount.textContent = total > 0 ? `${current}/${total}` : '0/0';
   });
 }
 
-function toggleRecentMenu(): void {
-  if (recentMenu.hidden) {
-    renderRecentMenu();
-    recentMenu.hidden = false;
-    btnRecent.classList.add('is-active');
-  } else {
-    closeRecentMenu();
-  }
+function applyZoom(factor: number): void {
+  zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor));
+  api.setZoomFactor(zoomFactor);
 }
 
-function bindRecentMenu(): void {
-  btnRecent.addEventListener('click', (evt) => {
-    evt.stopPropagation();
-    toggleRecentMenu();
-  });
+function zoomIn(): void {
+  applyZoom(zoomFactor + ZOOM_STEP);
+}
 
-  document.addEventListener('click', (evt) => {
-    if (recentMenu.hidden) return;
-    const target = evt.target as Node | null;
-    if (target && recentMenu.contains(target)) return;
-    closeRecentMenu();
-  });
+function zoomOut(): void {
+  applyZoom(zoomFactor - ZOOM_STEP);
+}
+
+function zoomReset(): void {
+  applyZoom(1);
 }
 
 function bindUi(): void {
@@ -597,55 +470,49 @@ function bindUi(): void {
   btnTheme.addEventListener('click', () => toggleTheme());
   fabOpen.addEventListener('click', () => void openFiles());
   bindCodeCopy();
-  bindRecentMenu();
-  bindLangMenu();
-  bindAbout();
+  bindContentLinks();
 
-  window.addEventListener('keydown', (evt) => {
-    const isCtrl = evt.ctrlKey || evt.metaKey;
-    if (isCtrl && evt.key.toLowerCase() === 'o') {
-      evt.preventDefault();
-      void openFiles();
-    } else if (isCtrl && evt.key.toLowerCase() === 'w') {
+  recentPopover = bindRecentMenu(btnRecent, recentMenu, openPath);
+  langPopover = bindLangMenu(btnLang, langMenu);
+  bindAbout();
+  bindSearch();
+
+  bindShortcuts({
+    openFiles,
+    closeActiveTab: async () => {
       const active = manager.getActive();
-      if (active) {
-        evt.preventDefault();
-        void onCloseTab(active.id);
-      }
-    } else if (isCtrl && evt.shiftKey && evt.key.toLowerCase() === 't') {
-      evt.preventDefault();
-      toggleTheme();
-    } else if (evt.key === 'Escape') {
-      closeRecentMenu();
-      closeLangMenu();
+      if (active) await onCloseTab(active.id);
+    },
+    toggleTheme,
+    closeMenus: () => {
+      recentPopover.close();
+      langPopover.close();
       closeAbout();
-    }
+    },
+    onSearch: openSearch,
+    zoomIn,
+    zoomOut,
+    zoomReset
   });
 
   api.onOpenPath((filePath) => {
     void openPath(filePath);
   });
 
-  void consumePending();
-  bindDragAndDrop();
-}
+  tabsEl.addEventListener('keydown', (evt) => {
+    if (evt.key !== 'ArrowLeft' && evt.key !== 'ArrowRight') return;
+    const state = manager.getState();
+    const tabs = state.tabs;
+    if (tabs.length < 2) return;
+    const index = tabs.findIndex((t) => t.id === state.activeId);
+    const delta = evt.key === 'ArrowRight' ? 1 : -1;
+    const next = tabs[(index + delta + tabs.length) % tabs.length];
+    manager.activate(next.id);
+    tabsEl.querySelector<HTMLButtonElement>(`[data-tab-id="${next.id}"]`)?.focus();
+  });
 
-async function checkForUpdate(): Promise<void> {
-  const today = new Date().toISOString().slice(0, 10);
-  let lastCheck = '';
-  try {
-    lastCheck = localStorage.getItem(UPDATE_CHECK_KEY) ?? '';
-    localStorage.setItem(UPDATE_CHECK_KEY, today);
-  } catch {
-    /* localStorage may be disabled — check anyway */
-  }
-  if (lastCheck === today) return;
-  const result = await api.checkUpdate();
-  if (result && result.hasUpdate) {
-    updateVersion = result.latestVersion.replace(/^v/, '');
-    applyStaticStrings();
-    btnAbout.classList.add('has-update');
-  }
+  void consumePending();
+  bindDragAndDrop({ api, manager, openPath, setStatus });
 }
 
 async function bootstrap(): Promise<void> {
@@ -658,6 +525,7 @@ async function bootstrap(): Promise<void> {
   manager.subscribe((state) => {
     renderTabbar(state);
     void renderContent(state);
+    snapshotSession();
   });
 
   subscribeLang(() => {
@@ -667,7 +535,25 @@ async function bootstrap(): Promise<void> {
 
   api.onFileEvent(handleFileEvent);
   bindUi();
-  void checkForUpdate();
+
+  contentEl.addEventListener(
+    'scroll',
+    debounce(() => {
+      const active = manager.getActive();
+      if (active) scrollByPath.set(active.filePath, contentEl.scrollTop);
+      snapshotSession();
+    }, 300)
+  );
+
+  await restoreSession();
+
+  void checkForUpdate(api, {
+    onUpdate: (v) => {
+      updateVersion = v;
+      applyStaticStrings();
+      btnAbout.classList.add('has-update');
+    }
+  });
 }
 
 void bootstrap();

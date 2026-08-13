@@ -1,7 +1,8 @@
-export type ThemeName = 'dark' | 'soft';
+import { DEFAULT_THEME, type ThemeName } from '@shared/constants';
+
+export type { ThemeName };
 
 const STORAGE_KEY = 'md-reader.theme';
-const DEFAULT_THEME: ThemeName = 'soft';
 const THEME_CYCLE: ThemeName[] = ['dark', 'soft'];
 
 function readStoredTheme(): ThemeName | null {

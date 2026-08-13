@@ -1320,3 +1320,35 @@ body {
   border-radius: 50%;
   background: var(--accent);
 }
+
+/* In-document search bar (Ctrl+F) */
+.searchbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--bg-tab-hover);
+}
+
+.searchbar[hidden] {
+  display: none;
+}
+
+.searchbar input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--bg-tab-hover);
+  border-radius: 6px;
+  background: var(--bg-content);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.search-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 40px;
+  text-align: center;
+}

@@ -49,6 +49,7 @@ const enMessages = {
   errorOpening: 'Error opening',
   notAFile: 'Not a file',
   markdownOnly: 'Markdown files only',
+  fileTooLarge: 'File too large (max 10 MB)',
   aboutTooltip: 'About LiveMD',
   aboutTitle: 'About',
   aboutVersion: 'Version {v}',
@@ -59,7 +60,11 @@ const enMessages = {
   aboutStack: 'Built with Electron + TypeScript',
   aboutClose: 'Close',
   updateAvailable: 'Update {v} available',
-  updateDownload: 'Go to downloads'
+  updateDownload: 'Go to downloads',
+  searchPlaceholder: 'Find in document',
+  searchPrev: 'Previous match',
+  searchNext: 'Next match',
+  searchClose: 'Close search'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -111,6 +116,7 @@ const ptMessages: Record<MsgKey, string> = {
   errorOpening: 'Erro ao abrir',
   notAFile: 'Não é um arquivo',
   markdownOnly: 'Apenas arquivos Markdown',
+  fileTooLarge: 'Arquivo muito grande (máx. 10 MB)',
   aboutTooltip: 'Sobre o LiveMD',
   aboutTitle: 'Sobre',
   aboutVersion: 'Versão {v}',
@@ -121,7 +127,11 @@ const ptMessages: Record<MsgKey, string> = {
   aboutStack: 'Feito com Electron + TypeScript',
   aboutClose: 'Fechar',
   updateAvailable: 'Atualização {v} disponível',
-  updateDownload: 'Ir para downloads'
+  updateDownload: 'Ir para downloads',
+  searchPlaceholder: 'Buscar no documento',
+  searchPrev: 'Resultado anterior',
+  searchNext: 'Próximo resultado',
+  searchClose: 'Fechar busca'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -171,6 +181,7 @@ const esMessages: Record<MsgKey, string> = {
   errorOpening: 'Error al abrir',
   notAFile: 'No es un archivo',
   markdownOnly: 'Solo archivos Markdown',
+  fileTooLarge: 'Archivo demasiado grande (máx. 10 MB)',
   aboutTooltip: 'Acerca de LiveMD',
   aboutTitle: 'Acerca de',
   aboutVersion: 'Versión {v}',
@@ -181,7 +192,11 @@ const esMessages: Record<MsgKey, string> = {
   aboutStack: 'Hecho con Electron + TypeScript',
   aboutClose: 'Cerrar',
   updateAvailable: 'Actualización {v} disponible',
-  updateDownload: 'Ir a descargas'
+  updateDownload: 'Ir a descargas',
+  searchPlaceholder: 'Buscar en el documento',
+  searchPrev: 'Resultado anterior',
+  searchNext: 'Resultado siguiente',
+  searchClose: 'Cerrar búsqueda'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {

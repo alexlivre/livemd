@@ -23,6 +23,7 @@ export interface TabModel {
 export type IpcChannel =
   | 'file:open-dialog'
   | 'file:read'
+  | 'file:allow-read'
   | 'file:changed'
   | 'file:removed'
   | 'tab:close'
@@ -30,7 +31,9 @@ export type IpcChannel =
   | 'app:set-language'
   | 'app:get-version'
   | 'app:open-external'
-  | 'app:check-update';
+  | 'app:check-update'
+  | 'search:find'
+  | 'search:stop';
 
 export type FileEvent =
   | { kind: 'changed'; filePath: string; content: string; modifiedAt: number }

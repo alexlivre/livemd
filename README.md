@@ -8,7 +8,7 @@
 [![Windows 10+](https://img.shields.io/badge/Windows-10%2B-0078D6)](https://www.microsoft.com/windows)
 [![Release](https://img.shields.io/github/v/release/alexlivre/livemd)](https://github.com/alexlivre/livemd/releases)
 
-**Live reload** · **Tabs** · **Syntax highlighting** · **2 themes**
+**Live reload** · **Tabs** · **Syntax highlighting** · **Search** · **2 themes**
 
 ---
 
@@ -60,7 +60,10 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **Localized UI** — follows the OS language (pt-BR, en-US, es) with a manual override dropdown in the titlebar; unsupported OS locales fall back to English
 - **About dialog** — info button in the titlebar shows version, author, license and the repository link (opens in the browser)
 - **Update indicator** — a dot on the About button appears when a newer release exists (silent check once a day); the About dialog links to the downloads page
-- **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, `contextIsolation` on, no remote content
+- **In-document search** — `Ctrl+F` opens a search bar (Chromium find-in-page) with match count and next/previous navigation
+- **Session restore** — open tabs and their scroll positions are restored on the next launch
+- **Zoom** — `Ctrl+` / `Ctrl+-` / `Ctrl+0` adjust the zoom level
+- **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, renderer sandbox on, `contextIsolation` on, `file:read` gated behind a session allowlist, no remote content
 - **NSIS installer** — per-user install (no admin), custom page asking to set LiveMD as the default app for Markdown files
 - **Flat UI, no native menus** — the Electron menu bar is removed; every action is an in-window control with shortcuts shown in the status bar
 
@@ -133,7 +136,10 @@ The status bar (bottom-left) reports what's happening — `Pronto`, `Lendo: file
 | `Ctrl+O` | Open files (native dialog) |
 | `Ctrl+W` | Close active tab |
 | `Ctrl+Shift+T` | Toggle theme (`dark` ↔ `soft`) |
-| `Esc` | Close the recent-files dropdown |
+| `Ctrl+F` | Search in the current document |
+| `Ctrl+` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset |
+| `←` / `→` | Cycle through tabs (with a tab focused) |
+| `Esc` | Close menus, search, or the About dialog |
 | Middle-click on tab | Close that tab |
 | Right-click on tab | Reveal the file in Explorer |
 
@@ -145,6 +151,11 @@ LiveMD has **no config files**. The only persisted settings live in `localStorag
 | --- | --- |
 | `md-reader.theme` | Theme preference: `dark` or `soft` |
 | `md-reader.recent` | Recent-files list, up to 10 paths |
+| `md-reader.lang` | UI language override: `auto`, `pt`, `en`, or `es` |
+| `md-reader.session` | Last session — open tabs and their scroll positions |
+| `md-reader.update-check` | Date of the last silent update check |
+
+The main process also mirrors the selected language in `userData/settings.json` so its native dialogs are localized from a cold start.
 
 > **Note:** these key names are frozen — they were kept when the app was renamed from "Markdown Reader" to "LiveMD" so existing users don't lose their theme or history. Do not rename them.
 
@@ -195,19 +206,30 @@ src/
 ├── main/            # Electron main process
 │   └── index.ts     # window, IPC handlers, chokidar watchers, single-instance, "Open with" argv
 ├── preload/
-│   └── index.ts     # contextBridge → window.mdApi (webUtils.getPathForFile, clipboard)
+│   └── index.ts     # contextBridge → window.mdApi (webUtils.getPathForFile, clipboard, webFrame)
 ├── renderer/        # plain TS + DOM — NO React
 │   ├── index.html
 │   └── src/
-│       ├── main.ts      # wiring: tabs ↔ render ↔ IPC ↔ drag & drop ↔ shortcuts
-│       ├── tabs.ts      # TabManager (tabs, active, close/activate/update)
-│       ├── markdown.ts  # marked + DOMPurify + highlight.js (13 languages)
-│       ├── theme.ts     # dark/soft themes, persistence
-│       ├── recent.ts    # recent-files history (localStorage)
-│       └── style.css    # CSS tokens, both themes, layout
+│       ├── main.ts       # wiring: tabs ↔ render ↔ IPC ↔ menus ↔ shortcuts
+│       ├── tabs.ts       # TabManager (tabs, active, close/activate/update)
+│       ├── markdown.ts   # marked + DOMPurify + highlight.js (13 languages)
+│       ├── theme.ts      # dark/soft themes, persistence
+│       ├── recent.ts     # recent-files history (localStorage)
+│       ├── session.ts    # session restore (tabs + scroll)
+│       ├── renderCache.ts # rendered-HTML cache keyed by content hash
+│       ├── drop.ts       # drag & drop
+│       ├── menus.ts      # generic popover + recent/lang dropdowns
+│       ├── shortcuts.ts  # keyboard shortcuts
+│       ├── update.ts     # update check
+│       ├── util.ts       # basename, errorMessage, escapeHtml, escapeAttr
+│       └── style.css     # CSS tokens, both themes, layout
 └── shared/           # contract shared by all three layers
-    ├── types.ts     # FileEvent, TabModel, IpcChannel
-    └── api.ts       # MdApi interface (window.mdApi)
+    ├── types.ts      # FileEvent, TabModel, IpcChannel
+    ├── api.ts        # MdApi interface (window.mdApi)
+    ├── i18n.ts       # pt/en/es dictionaries + mapOsLocale
+    ├── constants.ts  # markdown extensions, theme names/colors, max file size
+    ├── version.ts    # parseVersion / versionsDiffer
+    └── util.ts       # fnv1a, debounce
 build/
 ├── icon.svg          # source vector icon
 ├── icon.ico / icon.png   # generated by scripts/build-icon.mjs
@@ -221,12 +243,19 @@ scripts/
 | Channel | Direction | Purpose |
 | --- | --- | --- |
 | `file:open-dialog` | renderer → main | Native multi-select open dialog |
-| `file:read` | renderer → main | Read a path and start watching it |
+| `file:read` | renderer → main | Read a path and start watching it (path must be pre-authorized) |
+| `file:allow-read` | renderer → main | Authorize a path for `file:read` |
 | `tab:close` | renderer → main | Stop watching a closed tab's file |
 | `shell:reveal` | renderer → main | Show a file in Windows Explorer |
 | `app:consume-pending` | renderer → main | Fetch the "Open with" path from a cold start |
+| `app:get-locale` / `app:set-language` | renderer → main | Get/set the effective UI language |
+| `app:get-version` | renderer → main | Read the app version |
+| `app:open-external` | renderer → main | Open a whitelisted URL (`http`/`https`/`mailto`) |
+| `app:check-update` | renderer → main | Check GitHub releases for a newer version |
+| `search:find` / `search:stop` | renderer → main | Control find-in-page |
 | `file:event` | main → renderer | `changed` / `removed` / `error` watcher events |
 | `app:open-path` | main → renderer | "Open with" path from a second instance |
+| `search:found` | main → renderer | find-in-page result (matches, active ordinal) |
 
 **Request flow:**
 
@@ -252,6 +281,8 @@ npm install
 | --- | --- |
 | `npm run dev` | electron-vite dev server (hot-reload, renderer on localhost) |
 | `npm run typecheck` | `tsc` on both `tsconfig.node.json` and `tsconfig.web.json` — **run before building** |
+| `npm test` | Run the Vitest unit suite once |
+| `npm run test:watch` | Run Vitest in watch mode |
 | `npm run build` | Production build to `out/` |
 | `npm run build:icon` | Regenerate `build/icon.png` + `build/icon.ico` from `build/icon.svg` |
 | `npm run pack` | Build + icon + `electron-builder --dir` → `release/win-unpacked/LiveMD.exe` |
@@ -262,16 +293,24 @@ npm install
 - **Vanilla DOM renderer.** No React, no components/JSX — plain TypeScript and DOM only.
 - **TypeScript strict** with per-target tsconfigs; path aliases `@shared/*` and `@renderer/*` are configured in `electron.vite.config.ts` **and** both tsconfigs — keep in sync.
 - **Code, comments and commits in English; UI strings are localized via `src/shared/i18n.ts` (pt/en/es — OS-detected with a manual override in the titlebar; unsupported locales fall back to English).**
-- **Security posture is fixed:** `contextIsolation: true`, `nodeIntegration: false`, CSP `script-src 'self'` (no inline scripts — attach listeners with `addEventListener`).
+- **Security posture is fixed:** `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, CSP `script-src 'self'` (no inline scripts — attach listeners with `addEventListener`).
 - **Exactly two themes** (`dark`, `soft`) — new UI must use CSS tokens, never hardcoded colors.
 
 ## Testing
 
-There is **no test framework** in this project. Verification is:
+Unit tests use **Vitest** (`node` environment, `jsdom` for DOM/localStorage-dependent modules). `*.test.ts` files are excluded from `npm run typecheck`.
 
 ```bash
-npm run typecheck   # both TypeScript configs
-npm run build       # production build
+npm test            # run the suite once
+npm run test:watch  # watch mode
+```
+
+Full verification before shipping:
+
+```bash
+npm test
+npm run typecheck
+npm run build
 ```
 
 …followed by **manual testing in the PACKAGED build** (`release/win-unpacked/LiveMD.exe`), not the dev server. Dev-mode-only testing misses real bugs:
@@ -285,8 +324,9 @@ LiveMD is a local, read-only viewer, and it's built defensively:
 
 - **Sanitized rendering** — every Markdown file is passed through **DOMPurify** before touching the DOM, so malicious HTML in a `.md` file cannot execute.
 - **Content Security Policy** — `script-src 'self'`: no inline scripts or inline event handlers; the renderer attaches listeners via `addEventListener`.
-- **Isolated renderer** — `contextIsolation: true`, `nodeIntegration: false`; the page only talks to the main process through the typed `window.mdApi` bridge (`src/shared/api.ts`).
-- **No remote content** — nothing is fetched from the network; `window.open` is denied (`setWindowOpenHandler`) and `will-navigate` blocks navigation to dropped files.
+- **Sandboxed + isolated renderer** — `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`; the page only talks to the main process through the typed `window.mdApi` bridge (`src/shared/api.ts`).
+- **Path allowlist** — `file:read` only accepts paths the user has explicitly opened (dialog, drag & drop, recent files, or "Open with"); arbitrary reads over IPC are rejected.
+- **No remote content** — `window.open` is denied (`setWindowOpenHandler`) and `will-navigate` blocks **all** navigation; a dropped `file://` URL is converted into an open, and external links go through a protocol whitelist (`http`/`https`/`mailto`).
 - **Read-only** — LiveMD renders and watches files; it never writes to them. Closing tabs stops the watchers (`tab:close` / `unwatchAll`).
 - **No secrets, no telemetry** — no accounts, no API keys, no analytics.
 
@@ -294,7 +334,6 @@ LiveMD is a local, read-only viewer, and it's built defensively:
 
 - **Windows-only packaging** — NSIS x64 is the only packaging target. The app can be run in dev mode on macOS/Linux, but installers are Windows-only.
 - **Read-only viewer** — LiveMD renders and live-reloads; it does not edit or save files.
-- **No in-document search** — find-in-page is a future enhancement.
 - **Exactly two themes** — there is deliberately no `light` theme.
 - **Watch scope** — live reload covers files open in tabs; a closed tab's watcher is released.
 - **File types** — only Markdown extensions (`.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`) are accepted by the open dialog and drag & drop.
@@ -310,7 +349,7 @@ Contributions are welcome! TL;DR:
 1. Fork & clone
 2. Create a feature branch
 3. Make focused commits (Conventional Commits, English)
-4. Ensure `npm run typecheck && npm run build` pass, and manually test in the **packaged** build (`npm run pack`)
+4. Ensure `npm test && npm run typecheck && npm run build` pass, and manually test in the **packaged** build (`npm run pack`)
 5. Open a Pull Request against `main`
 
 ## Built with
@@ -322,6 +361,7 @@ Contributions are welcome! TL;DR:
 - **[highlight.js](https://highlightjs.org)** — syntax highlighting
 - **[chokidar](https://github.com/paulmillr/chokidar)** — reliable cross-platform file watching
 - **[electron-builder](https://www.electron.build)** (NSIS) — per-user Windows installer
+- **[Vitest](https://vitest.dev)** — unit tests
 - **Plain DOM** — no UI framework; everything is vanilla TypeScript and CSS tokens
 
 ## License

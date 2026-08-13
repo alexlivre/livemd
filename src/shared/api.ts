@@ -12,9 +12,15 @@ export interface UpdateCheck {
   hasUpdate: boolean;
 }
 
+export interface SearchResult {
+  matches: number;
+  activeMatchOrdinal: number;
+}
+
 export interface MdApi {
   openDialog: () => Promise<OpenedFile[]>;
   readFile: (filePath: string) => Promise<OpenedFile>;
+  allowRead: (filePath: string) => Promise<void>;
   closeTab: (filePath: string) => Promise<void>;
   revealInFolder: (filePath: string) => Promise<void>;
   consumePendingPath: () => Promise<string | null>;
@@ -23,8 +29,13 @@ export interface MdApi {
   getAppVersion: () => Promise<string>;
   openExternal: (url: string) => Promise<void>;
   checkUpdate: () => Promise<UpdateCheck | null>;
+  findInPage: (text: string, options?: { findNext?: boolean; forward?: boolean }) => Promise<void>;
+  stopFind: () => Promise<void>;
+  onFoundInPage: (handler: (result: SearchResult) => void) => () => void;
   onOpenPath: (handler: (filePath: string) => void) => () => void;
   onFileEvent: (handler: (event: import('./types').FileEvent) => void) => () => void;
   getPathForFile: (file: File) => string;
   copyText: (text: string) => void;
+  setZoomFactor: (factor: number) => void;
+  getZoomFactor: () => number;
 }

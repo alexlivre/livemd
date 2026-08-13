@@ -2,34 +2,53 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
+import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES } from '@shared/constants';
+import { parseVersion, versionsDiffer } from '@shared/version';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const watched = new Map<string, FSWatcher>();
+const readablePaths = new Set<string>();
 let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
-let currentLang: AppLanguage = mapOsLocale(app.getLocale());
-const REPO_URL = 'https://github.com/alexlivre/livemd';
-const REPO_RELEASES_URL = `${REPO_URL}/releases`;
+
+const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
+
+interface Settings {
+  language?: AppLanguage;
+}
+
+function readSettings(): Settings {
+  try {
+    return JSON.parse(fsSync.readFileSync(SETTINGS_FILE, 'utf-8')) as Settings;
+  } catch {
+    return {};
+  }
+}
+
+function writeSettings(partial: Settings): void {
+  const merged = { ...readSettings(), ...partial };
+  try {
+    fsSync.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
+    fsSync.writeFileSync(SETTINGS_FILE, JSON.stringify(merged), 'utf-8');
+  } catch {
+    /* ignore */
+  }
+}
+
+let currentLang: AppLanguage = readSettings().language ?? mapOsLocale(app.getLocale());
 const REPO_API = 'alexlivre/livemd';
-
-function parseVersion(value: string): number[] {
-  const parts = value.replace(/^v/, '').split('.');
-  return [0, 1, 2].map((i) => Number.parseInt(parts[i] ?? '0', 10) || 0);
-}
-
-function versionsDiffer(a: string, b: string): boolean {
-  const va = parseVersion(a);
-  const vb = parseVersion(b);
-  return va[0] !== vb[0] || va[1] !== vb[1] || va[2] !== vb[2];
-}
-
-const SUPPORTED_EXTS = /\.(md|markdown|mdown|mkd|mdx)$/i;
+const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
 function isMarkdown(filePath: string): boolean {
-  return SUPPORTED_EXTS.test(filePath);
+  return MARKDOWN_EXT_RE.test(filePath);
+}
+
+function trustPath(filePath: string): void {
+  readablePaths.add(path.resolve(filePath));
 }
 
 // Converts a file:// URL (as produced by a browser-initiated navigation to a
@@ -72,6 +91,7 @@ function extractMarkdownFromArgs(argv: string[]): string | null {
 async function readMarkdownFile(filePath: string) {
   const stat = await fs.stat(filePath);
   if (!stat.isFile()) throw new Error(t(currentLang, 'notAFile'));
+  if (stat.size > MAX_FILE_BYTES) throw new Error(t(currentLang, 'fileTooLarge'));
   const content = await fs.readFile(filePath, 'utf-8');
   return { content, modifiedAt: stat.mtimeMs };
 }
@@ -138,6 +158,7 @@ function focusMainWindow(): void {
 }
 
 function deliverOpenPath(filePath: string): void {
+  trustPath(filePath);
   if (!mainWindow || mainWindow.webContents.isLoading()) {
     pendingOpenPath = filePath;
     return;
@@ -152,7 +173,7 @@ function registerIpc(win: BrowserWindow): void {
       title: t(currentLang, 'openDialogTitle'),
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: t(currentLang, 'filterMarkdown'), extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'] },
+        { name: t(currentLang, 'filterMarkdown'), extensions: [...MARKDOWN_EXTENSIONS] },
         { name: t(currentLang, 'filterAll'), extensions: ['*'] }
       ]
     });
@@ -171,6 +192,7 @@ function registerIpc(win: BrowserWindow): void {
           modifiedAt
         });
         watchFile(filePath, win);
+        trustPath(filePath);
       } catch (err) {
         dialog.showErrorBox(
           t(currentLang, 'errorOpening'),
@@ -181,16 +203,25 @@ function registerIpc(win: BrowserWindow): void {
     return files;
   });
 
-  ipcMain.handle('file:read', async (_evt, filePath: string) => {
-    if (!isMarkdown(filePath)) throw new Error(t(currentLang, 'markdownOnly'));
-    const { content, modifiedAt } = await readMarkdownFile(filePath);
-    watchFile(filePath, win);
+  ipcMain.handle('file:read', async (_evt, filePath: unknown) => {
+    if (typeof filePath !== 'string') throw new Error(t(currentLang, 'markdownOnly'));
+    const resolved = path.resolve(filePath);
+    if (!readablePaths.has(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
+    if (!isMarkdown(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
+    const { content, modifiedAt } = await readMarkdownFile(resolved);
+    watchFile(resolved, win);
     return {
-      filePath,
-      fileName: path.basename(filePath),
+      filePath: resolved,
+      fileName: path.basename(resolved),
       content,
       modifiedAt
     };
+  });
+
+  ipcMain.handle('file:allow-read', (_evt, filePath: unknown) => {
+    if (typeof filePath === 'string' && isMarkdown(filePath)) {
+      trustPath(filePath);
+    }
   });
 
   ipcMain.handle('tab:close', (_evt, filePath: string): void => {
@@ -212,15 +243,22 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('app:set-language', (_evt, lang: unknown) => {
     if (lang === 'pt' || lang === 'en' || lang === 'es') {
       currentLang = lang;
+      writeSettings({ language: lang });
     }
   });
 
   ipcMain.handle('app:get-version', () => app.getVersion());
 
   ipcMain.handle('app:open-external', async (_evt, url: unknown) => {
-    if (url === REPO_URL || url === REPO_RELEASES_URL) {
-      await shell.openExternal(url);
+    if (typeof url !== 'string') return;
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return;
     }
+    if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) return;
+    await shell.openExternal(url);
   });
 
   ipcMain.handle('app:check-update', async () => {
@@ -238,6 +276,22 @@ function registerIpc(win: BrowserWindow): void {
       return null;
     }
   });
+
+  ipcMain.handle('search:find', (_evt, text: unknown, options: unknown) => {
+    if (typeof text !== 'string' || text.length === 0) {
+      mainWindow?.webContents.stopFindInPage('clearSelection');
+      return;
+    }
+    const opts = (options ?? {}) as { findNext?: boolean; forward?: boolean };
+    mainWindow?.webContents.findInPage(text, {
+      findNext: opts.findNext !== false,
+      forward: opts.forward !== false
+    });
+  });
+
+  ipcMain.handle('search:stop', () => {
+    mainWindow?.webContents.stopFindInPage('clearSelection');
+  });
 }
 
 async function createWindow(): Promise<void> {
@@ -246,12 +300,13 @@ async function createWindow(): Promise<void> {
     height: 800,
     minWidth: 600,
     minHeight: 400,
-    backgroundColor: '#1a1d23',
+    backgroundColor: '#f5f5f5',
     title: 'LiveMD',
     autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -266,12 +321,19 @@ async function createWindow(): Promise<void> {
   // (e.g. the drop is rejected on file:// pages), Chromium attempts to
   // navigate to the file. Block the navigation and open the file instead.
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) return;
     event.preventDefault();
+    if (!url.startsWith('file://')) return;
     const filePath = filePathFromFileUrl(url);
     if (filePath && isMarkdown(filePath)) {
       deliverOpenPath(filePath);
     }
+  });
+
+  mainWindow.webContents.on('found-in-page', (_event, result) => {
+    mainWindow?.webContents.send('search:found', {
+      matches: result.matches,
+      activeMatchOrdinal: result.activeMatchOrdinal
+    });
   });
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -290,6 +352,8 @@ async function createWindow(): Promise<void> {
   } else {
     await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
+
+  mainWindow.once('ready-to-show', () => mainWindow?.show());
 
   mainWindow.webContents.on('did-finish-load', () => {
     if (pendingOpenPath && mainWindow) {

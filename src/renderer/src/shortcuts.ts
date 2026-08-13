@@ -1,0 +1,43 @@
+import type { ThemeName } from '@shared/constants';
+
+export interface ShortcutDeps {
+  openFiles: () => Promise<void>;
+  closeActiveTab: () => Promise<void>;
+  toggleTheme: () => ThemeName;
+  closeMenus: () => void;
+  onSearch: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  zoomReset: () => void;
+}
+
+export function bindShortcuts(deps: ShortcutDeps): void {
+  window.addEventListener('keydown', (evt) => {
+    const isCtrl = evt.ctrlKey || evt.metaKey;
+    const key = evt.key.toLowerCase();
+    if (isCtrl && key === 'o') {
+      evt.preventDefault();
+      void deps.openFiles();
+    } else if (isCtrl && key === 'w') {
+      evt.preventDefault();
+      void deps.closeActiveTab();
+    } else if (isCtrl && evt.shiftKey && key === 't') {
+      evt.preventDefault();
+      deps.toggleTheme();
+    } else if (isCtrl && key === 'f') {
+      evt.preventDefault();
+      deps.onSearch();
+    } else if (isCtrl && (key === '=' || key === '+')) {
+      evt.preventDefault();
+      deps.zoomIn();
+    } else if (isCtrl && key === '-') {
+      evt.preventDefault();
+      deps.zoomOut();
+    } else if (isCtrl && key === '0') {
+      evt.preventDefault();
+      deps.zoomReset();
+    } else if (evt.key === 'Escape') {
+      deps.closeMenus();
+    }
+  });
+}

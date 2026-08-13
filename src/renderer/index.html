@@ -145,13 +145,21 @@
         </div>
       </div>
 
+      <div id="searchbar" class="searchbar" hidden>
+        <input id="search-input" type="text" data-i18n-aria="searchPlaceholder" placeholder="Buscar" />
+        <span id="search-count" class="search-count"></span>
+        <button id="search-prev" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchPrev">↑</button>
+        <button id="search-next" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchNext">↓</button>
+        <button id="search-close" class="btn btn-ghost btn-icon" type="button" data-i18n-aria="searchClose">×</button>
+      </div>
+
       <footer id="statusbar" class="statusbar">
         <div class="status-shortcuts">
           <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>O</kbd> <span data-i18n="shortcutOpen">abrir</span></span>
           <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>W</kbd> <span data-i18n="shortcutCloseTab">fechar aba</span></span>
           <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> <span data-i18n="shortcutTheme">tema</span></span>
         </div>
-        <div class="status-messages">
+        <div class="status-messages" aria-live="polite">
           <span id="status-left">Pronto</span>
           <span id="status-right"></span>
         </div>
