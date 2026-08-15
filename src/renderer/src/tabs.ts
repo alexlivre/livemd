@@ -2,6 +2,8 @@ import type { TabModel } from '@shared/types';
 
 export interface TabData extends TabModel {
   content: string;
+  orphaned?: boolean;
+  pending?: boolean;
 }
 
 export type TabListener = (state: TabState) => void;
@@ -46,6 +48,22 @@ export class TabManager {
     return this.addMany([file])[0];
   }
 
+  // Creates a second tab for the same filePath (used when a deleted file is
+  // recreated on disk and the user wants to keep the frozen tab open too).
+  addCopy(file: OpenTabInput): TabData {
+    const tab: TabData = {
+      id: this.nextId(),
+      filePath: file.filePath,
+      fileName: file.fileName,
+      content: file.content,
+      modifiedAt: file.modifiedAt
+    };
+    this.tabs.push(tab);
+    this.activeId = tab.id;
+    this.emit();
+    return tab;
+  }
+
   addMany(files: OpenTabInput[], activePath?: string): TabData[] {
     const added: TabData[] = [];
     for (const file of files) {
@@ -75,13 +93,72 @@ export class TabManager {
     return added;
   }
 
+  // Updates every non-orphaned tab for the path; frozen (orphaned) tabs keep
+  // their content untouched.
   updateContent(filePath: string, content: string, modifiedAt: number): void {
-    const tab = this.tabs.find((t) => t.filePath === filePath);
-    if (!tab) return;
-    if (tab.content === content) return;
-    tab.content = content;
-    tab.modifiedAt = modifiedAt;
-    this.emit();
+    let changed = false;
+    for (const tab of this.tabs) {
+      if (tab.filePath !== filePath || tab.orphaned) continue;
+      if (tab.content === content) continue;
+      tab.content = content;
+      tab.modifiedAt = modifiedAt;
+      tab.pending = false;
+      changed = true;
+    }
+    if (changed) this.emit();
+  }
+
+  markOrphaned(filePath: string): void {
+    let changed = false;
+    for (const tab of this.tabs) {
+      if (tab.filePath === filePath && !tab.orphaned) {
+        tab.orphaned = true;
+        tab.pending = false;
+        changed = true;
+      }
+    }
+    if (changed) this.emit();
+  }
+
+  clearOrphaned(filePath: string): void {
+    let changed = false;
+    for (const tab of this.tabs) {
+      if (tab.filePath === filePath && tab.orphaned) {
+        tab.orphaned = false;
+        changed = true;
+      }
+    }
+    if (changed) this.emit();
+  }
+
+  markPending(filePath: string): void {
+    let changed = false;
+    for (const tab of this.tabs) {
+      if (tab.filePath === filePath && !tab.orphaned && !tab.pending) {
+        tab.pending = true;
+        changed = true;
+      }
+    }
+    if (changed) this.emit();
+  }
+
+  clearPending(filePath: string): void {
+    let changed = false;
+    for (const tab of this.tabs) {
+      if (tab.filePath === filePath && tab.pending) {
+        tab.pending = false;
+        changed = true;
+      }
+    }
+    if (changed) this.emit();
+  }
+
+  hasPath(filePath: string): boolean {
+    return this.tabs.some((t) => t.filePath === filePath);
+  }
+
+  hasOrphaned(filePath: string): boolean {
+    return this.tabs.some((t) => t.filePath === filePath && t.orphaned);
   }
 
   close(id: string): string | null {

@@ -75,3 +75,65 @@ describe('TabManager', () => {
     expect(added[0].id).toBe(m.getState().tabs[0].id);
   });
 });
+
+describe('TabManager orphaned state', () => {
+  it('freezes orphaned tabs against content updates', () => {
+    const m = new TabManager();
+    m.add(file('/a.md', '# frozen'));
+    m.markOrphaned('/a.md');
+    m.updateContent('/a.md', '# new', 2);
+    expect(m.getState().tabs[0].content).toBe('# frozen');
+    expect(m.getState().tabs[0].orphaned).toBe(true);
+  });
+
+  it('clears the orphaned flag', () => {
+    const m = new TabManager();
+    m.add(file('/a.md'));
+    m.markOrphaned('/a.md');
+    m.clearOrphaned('/a.md');
+    expect(m.getState().tabs[0].orphaned).toBe(false);
+  });
+
+  it('updates every non-orphaned tab for a path', () => {
+    const m = new TabManager();
+    m.add(file('/a.md', '# old'));
+    m.markOrphaned('/a.md');
+    m.addCopy(file('/a.md', '# old'));
+    m.updateContent('/a.md', '# new', 2);
+    const tabs = m.getState().tabs;
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0].content).toBe('# old');
+    expect(tabs[1].content).toBe('# new');
+    expect(tabs[1].orphaned).toBeFalsy();
+  });
+
+  it('marks and clears pending on live tabs only', () => {
+    const m = new TabManager();
+    m.add(file('/a.md'));
+    m.markPending('/a.md');
+    expect(m.getState().tabs[0].pending).toBe(true);
+    m.markOrphaned('/a.md');
+    expect(m.getState().tabs[0].pending).toBe(false);
+  });
+
+  it('reports path and orphan presence', () => {
+    const m = new TabManager();
+    expect(m.hasPath('/a.md')).toBe(false);
+    m.add(file('/a.md'));
+    expect(m.hasPath('/a.md')).toBe(true);
+    expect(m.hasOrphaned('/a.md')).toBe(false);
+    m.markOrphaned('/a.md');
+    expect(m.hasOrphaned('/a.md')).toBe(true);
+  });
+
+  it('addCopy creates a second tab for the same path', () => {
+    const m = new TabManager();
+    const first = m.add(file('/a.md', '# frozen'));
+    const copy = m.addCopy(file('/a.md', '# from disk'));
+    expect(m.getState().tabs).toHaveLength(2);
+    expect(m.getState().activeId).toBe(copy.id);
+    expect(first.id).not.toBe(copy.id);
+    expect(m.getState().tabs[0].content).toBe('# frozen');
+    expect(m.getState().tabs[1].content).toBe('# from disk');
+  });
+});

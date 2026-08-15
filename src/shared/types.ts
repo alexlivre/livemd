@@ -24,6 +24,7 @@ export type IpcChannel =
   | 'file:open-dialog'
   | 'file:read'
   | 'file:allow-read'
+  | 'file:save-as'
   | 'file:changed'
   | 'file:removed'
   | 'tab:close'
@@ -38,4 +39,9 @@ export type IpcChannel =
 export type FileEvent =
   | { kind: 'changed'; filePath: string; content: string; modifiedAt: number }
   | { kind: 'removed'; filePath: string }
+  | { kind: 'recreated'; filePath: string }
   | { kind: 'error'; filePath: string; message: string };
+
+export interface SaveAsResult {
+  savedPath: string;
+}

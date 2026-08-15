@@ -13,6 +13,8 @@ import { bindRecentMenu, bindLangMenu, type Popover } from './menus';
 import { checkForUpdate } from './update';
 import { saveSession, loadSession } from './session';
 import { splitMarkdown, SEGMENT_BYTES } from './segment';
+import { Toast, type ToastAction } from './toast';
+import { RemovalGrace } from './pending';
 import { debounce } from '@shared/util';
 import { enablePerf, perfMark } from '@shared/perf';
 
@@ -74,6 +76,15 @@ let lastFocused: HTMLElement | null = null;
 let recentPopover: Popover;
 let langPopover: Popover;
 
+const PAUSE_KEY = 'md-reader.pause';
+const toastEl = document.getElementById('toast') as HTMLDivElement;
+const toast = new Toast(toastEl);
+const btnPause = document.getElementById('btn-pause') as HTMLButtonElement;
+const grace = new RemovalGrace();
+const pendingByPath = new Map<string, { content: string; modifiedAt: number }>();
+const recentlySaved = new Map<string, number>();
+let paused = readStoredPause();
+
 let markdownPromise: Promise<typeof import('./markdown')> | null = null;
 
 function getMarkdown(): Promise<typeof import('./markdown')> {
@@ -127,6 +138,8 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
     el.setAttribute('data-tab-id', tab.id);
     const isActive = tab.id === state.activeId;
     if (isActive) el.classList.add('is-active');
+    if (tab.orphaned) el.classList.add('is-orphaned');
+    if (tab.pending) el.classList.add('is-pending');
     el.setAttribute('aria-selected', isActive ? 'true' : 'false');
     el.tabIndex = isActive ? 0 : -1;
 
@@ -147,7 +160,11 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
     });
     el.appendChild(closeBtn);
 
-    el.addEventListener('click', () => manager.activate(tab.id));
+    el.addEventListener('click', () => {
+      manager.activate(tab.id);
+      if (tab.pending) showChangedActions(tab.filePath);
+      else if (tab.orphaned) showRemovedActions(tab.filePath);
+    });
     el.addEventListener('auxclick', (evt) => {
       if (evt.button === 1) {
         evt.preventDefault();
@@ -341,16 +358,196 @@ async function onCloseTab(id: string): Promise<void> {
   }
 }
 
+function readStoredPause(): boolean {
+  try {
+    return localStorage.getItem(PAUSE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeStoredPause(value: boolean): void {
+  try {
+    localStorage.setItem(PAUSE_KEY, value ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+
+function applyPauseUi(): void {
+  btnPause.classList.toggle('is-paused', paused);
+  (btnPause.querySelector('.icon-pause') as HTMLElement).hidden = paused;
+  (btnPause.querySelector('.icon-play') as HTMLElement).hidden = !paused;
+  const label = paused ? t('resumeTooltip') : t('pauseTooltip');
+  btnPause.title = label;
+  btnPause.setAttribute('aria-label', label);
+}
+
+function bindPauseToggle(): void {
+  btnPause.addEventListener('click', () => {
+    paused = !paused;
+    writeStoredPause(paused);
+    applyPauseUi();
+  });
+}
+
+function hasLiveTab(filePath: string): boolean {
+  return manager.getState().tabs.some((t) => t.filePath === filePath && !t.orphaned);
+}
+
+function findTab(filePath: string): TabData | null {
+  return manager.getState().tabs.find((t) => t.filePath === filePath) ?? null;
+}
+
+function showTransientToast(message: string): void {
+  toast.show({ message });
+}
+
+function showChangedActions(filePath: string): void {
+  const pending = pendingByPath.get(filePath);
+  if (!pending) return;
+  const actions: ToastAction[] = [
+    { label: t('actSync'), primary: true, onClick: () => syncPending(filePath) },
+    { label: t('actNotNow'), onClick: () => dismissPending(filePath) }
+  ];
+  toast.show({
+    message: t('toastChanged', { file: basename(filePath) }),
+    actions,
+    persist: true
+  });
+}
+
+function showRemovedActions(filePath: string): void {
+  const actions: ToastAction[] = [
+    { label: t('actSaveAs'), primary: true, onClick: () => void saveFrozen(filePath) },
+    { label: t('actCloseTab'), onClick: () => void closeOrphanedTab(filePath) },
+    { label: t('actKeep'), onClick: () => toast.hide() }
+  ];
+  toast.show({
+    message: t('toastRemoved', { file: basename(filePath) }),
+    actions,
+    persist: true
+  });
+}
+
+function showRecreatedActions(filePath: string): void {
+  const actions: ToastAction[] = [
+    { label: t('actOpenNewTab'), primary: true, onClick: () => void openRecreated(filePath) },
+    { label: t('actIgnore'), onClick: () => toast.hide() }
+  ];
+  toast.show({
+    message: t('toastRecreated', { file: basename(filePath) }),
+    actions,
+    persist: true
+  });
+}
+
+function syncPending(filePath: string): void {
+  const pending = pendingByPath.get(filePath);
+  if (pending) {
+    manager.updateContent(filePath, pending.content, pending.modifiedAt);
+    pendingByPath.delete(filePath);
+  } else {
+    manager.clearPending(filePath);
+  }
+  showTransientToast(t('toastSynced'));
+}
+
+function dismissPending(filePath: string): void {
+  pendingByPath.delete(filePath);
+  manager.clearPending(filePath);
+}
+
+async function saveFrozen(filePath: string): Promise<void> {
+  const tab = findTab(filePath);
+  if (!tab) return;
+  try {
+    const result = await api.saveAs(filePath, tab.content);
+    if (!result) return;
+    recordRecentFile(result.savedPath);
+    if (result.savedPath === filePath) {
+      manager.clearOrphaned(filePath);
+      const timer = recentlySaved.get(filePath);
+      if (timer !== undefined) window.clearTimeout(timer);
+      recentlySaved.set(
+        filePath,
+        window.setTimeout(() => recentlySaved.delete(filePath), 3000)
+      );
+    }
+    showTransientToast(t('toastSaved', { file: basename(result.savedPath) }));
+  } catch (err) {
+    toast.show({ message: t('saveError', { msg: errorMessage(err) }), persist: true });
+  }
+}
+
+async function closeOrphanedTab(filePath: string): Promise<void> {
+  const tab = findTab(filePath);
+  if (tab) await onCloseTab(tab.id);
+}
+
+async function openRecreated(filePath: string): Promise<void> {
+  try {
+    await api.allowRead(filePath);
+    const file = await api.readFile(filePath);
+    manager.addCopy(file);
+    recordRecentFile(file.filePath);
+  } catch (err) {
+    setStatus(t('openError', { msg: errorMessage(err) }), 'err');
+  }
+}
+
+async function refreshFromDisk(filePath: string): Promise<void> {
+  try {
+    await api.allowRead(filePath);
+    const file = await api.readFile(filePath);
+    if (paused) {
+      pendingByPath.set(filePath, { content: file.content, modifiedAt: file.modifiedAt });
+      manager.markPending(filePath);
+      showChangedActions(filePath);
+    } else {
+      manager.updateContent(filePath, file.content, file.modifiedAt);
+      showTransientToast(t('toastUpdated'));
+    }
+  } catch {
+    /* file may have been removed again */
+  }
+}
+
 function handleFileEvent(event: FileEvent): void {
   switch (event.kind) {
     case 'changed':
+      if (!hasLiveTab(event.filePath)) break;
+      if (paused) {
+        pendingByPath.set(event.filePath, { content: event.content, modifiedAt: event.modifiedAt });
+        manager.markPending(event.filePath);
+        showChangedActions(event.filePath);
+        break;
+      }
       manager.updateContent(event.filePath, event.content, event.modifiedAt);
       setStatus(t('updated', { file: basename(event.filePath) }), 'ok');
+      showTransientToast(t('toastUpdated'));
       break;
     case 'removed':
-      manager.closeByPath(event.filePath);
-      renderCache.delete(event.filePath);
-      setStatus(t('removed', { file: basename(event.filePath) }), 'warn');
+      if (!manager.hasPath(event.filePath)) break;
+      if (grace.isActive(event.filePath)) break;
+      if (!hasLiveTab(event.filePath)) break;
+      grace.start(event.filePath, () => {
+        pendingByPath.delete(event.filePath);
+        manager.clearPending(event.filePath);
+        manager.markOrphaned(event.filePath);
+        showRemovedActions(event.filePath);
+      });
+      break;
+    case 'recreated':
+      if (recentlySaved.delete(event.filePath)) break;
+      if (grace.isActive(event.filePath)) {
+        grace.cancel(event.filePath);
+        void refreshFromDisk(event.filePath);
+        break;
+      }
+      if (manager.hasOrphaned(event.filePath)) {
+        showRecreatedActions(event.filePath);
+      }
       break;
     case 'error':
       setStatus(t('errorPrefix', { msg: event.message }), 'err');
@@ -573,6 +770,7 @@ function bindUi(): void {
   fabOpen.addEventListener('click', () => void openFiles());
   bindCodeCopy();
   bindContentLinks();
+  bindPauseToggle();
 
   recentPopover = bindRecentMenu(btnRecent, recentMenu, openPath);
   langPopover = bindLangMenu(btnLang, langMenu);
@@ -626,6 +824,7 @@ async function bootstrap(): Promise<void> {
   });
   perfMark('renderer:i18n');
   applyStaticStrings();
+  applyPauseUi();
 
   if (typeof requestIdleCallback === 'function') {
     requestIdleCallback(
@@ -646,6 +845,7 @@ async function bootstrap(): Promise<void> {
 
   subscribeLang(() => {
     applyStaticStrings();
+    applyPauseUi();
     refreshUi();
   });
 

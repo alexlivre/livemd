@@ -17,10 +17,15 @@ export interface SearchResult {
   activeMatchOrdinal: number;
 }
 
+export interface SaveAsResult {
+  savedPath: string;
+}
+
 export interface MdApi {
   openDialog: () => Promise<OpenedFile[]>;
   readFile: (filePath: string) => Promise<OpenedFile>;
   allowRead: (filePath: string) => Promise<void>;
+  saveAs: (filePath: string, content: string) => Promise<SaveAsResult | null>;
   closeTab: (filePath: string) => Promise<void>;
   revealInFolder: (filePath: string) => Promise<void>;
   consumePendingPath: () => Promise<string | null>;

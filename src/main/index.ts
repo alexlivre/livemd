@@ -6,6 +6,7 @@ import fsSync from 'node:fs';
 import type { FSWatcher } from 'chokidar';
 import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
 import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES } from '@shared/constants';
+import { suggestBackupPath } from '@shared/backupName';
 import { parseVersion, versionsDiffer } from '@shared/version';
 import { enablePerf, perfMark } from '@shared/perf';
 
@@ -24,6 +25,7 @@ app.commandLine.appendSwitch('disable-blink-features', 'StandardizedBrowserZoom'
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const watched = new Map<string, FSWatcher>();
+const watchCounts = new Map<string, number>();
 const readablePaths = new Set<string>();
 
 let chokidarPromise: Promise<typeof import('chokidar')> | null = null;
@@ -117,6 +119,8 @@ async function readMarkdownFile(filePath: string) {
 }
 
 async function watchFile(filePath: string, win: BrowserWindow): Promise<void> {
+  const nextCount = (watchCounts.get(filePath) ?? 0) + 1;
+  watchCounts.set(filePath, nextCount);
   if (watched.has(filePath)) return;
 
   const chokidar = await getChokidar();
@@ -149,6 +153,10 @@ async function watchFile(filePath: string, win: BrowserWindow): Promise<void> {
     win.webContents.send('file:event', { kind: 'removed', filePath });
   });
 
+  watcher.on('add', () => {
+    win.webContents.send('file:event', { kind: 'recreated', filePath });
+  });
+
   watcher.on('error', (err) => {
     win.webContents.send('file:event', {
       kind: 'error',
@@ -161,6 +169,12 @@ async function watchFile(filePath: string, win: BrowserWindow): Promise<void> {
 }
 
 function unwatchFile(filePath: string): void {
+  const remaining = (watchCounts.get(filePath) ?? 1) - 1;
+  if (remaining > 0) {
+    watchCounts.set(filePath, remaining);
+    return;
+  }
+  watchCounts.delete(filePath);
   const watcher = watched.get(filePath);
   if (!watcher) return;
   void watcher.close();
@@ -255,6 +269,32 @@ function registerIpc(win: BrowserWindow): void {
     if (typeof filePath === 'string' && isMarkdown(filePath)) {
       trustPath(filePath);
     }
+  });
+
+  ipcMain.handle('file:save-as', async (_evt, payload: unknown) => {
+    if (typeof payload !== 'object' || payload === null) throw new Error('invalid payload');
+    const { filePath, content } = payload as { filePath?: unknown; content?: unknown };
+    if (typeof filePath !== 'string' || typeof content !== 'string') {
+      throw new Error(t(currentLang, 'markdownOnly'));
+    }
+    if (content.length > MAX_FILE_BYTES) throw new Error(t(currentLang, 'fileTooLarge'));
+
+    const defaultPath = fsSync.existsSync(filePath)
+      ? suggestBackupPath(filePath, (candidate) => fsSync.existsSync(candidate))
+      : filePath;
+
+    const result = await dialog.showSaveDialog(win, {
+      title: t(currentLang, 'actSaveAs'),
+      defaultPath,
+      filters: [
+        { name: t(currentLang, 'filterMarkdown'), extensions: [...MARKDOWN_EXTENSIONS] },
+        { name: t(currentLang, 'filterAll'), extensions: ['*'] }
+      ]
+    });
+    if (result.canceled || !result.filePath) return null;
+
+    await fs.writeFile(result.filePath, content, 'utf-8');
+    return { savedPath: result.filePath };
   });
 
   ipcMain.handle('tab:close', (_evt, filePath: string): void => {

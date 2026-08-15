@@ -28,6 +28,7 @@
   /* Accent */
   --accent: #7aa2f7;
   --accent-hover: #92b6f9;
+  --accent-strong: #6c94e8;
   --accent-soft: rgba(122, 162, 247, 0.15);
 
   /* Semantic */
@@ -95,6 +96,7 @@
   /* Accent */
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
+  --accent-strong: #1d4ed8;
   --accent-soft: rgba(37, 99, 235, 0.08);
 
   /* Semantic */
@@ -507,8 +509,14 @@ body {
   box-shadow: inset 0 2px 0 0 var(--accent);
 }
 
-.tab.is-dirty .tab-title::after {
+.tab.is-pending .tab-title::after {
   content: ' •';
+  color: var(--warning);
+  font-weight: bold;
+}
+
+.tab.is-orphaned .tab-title::after {
+  content: ' ⚠';
   color: var(--warning);
   font-weight: bold;
 }
@@ -1055,6 +1063,92 @@ body {
 
 .statusbar .err {
   color: var(--danger);
+}
+
+.status-pause {
+  margin-left: auto;
+}
+
+.status-pause.is-paused {
+  color: var(--accent);
+}
+
+/* ============================================================
+   Toast pill (non-blocking notices above the status bar)
+   ============================================================ */
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 42px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(720px, calc(100vw - 32px));
+  padding: 8px 14px;
+  background: var(--bg-titlebar);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  font-size: 12.5px;
+  color: var(--text);
+  animation: toast-in 0.16s ease-out;
+}
+
+.toast[hidden] {
+  display: none;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.toast-message {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.toast-btn {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-code);
+  color: var(--text);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.toast-btn:hover {
+  background: var(--bg-tab-active);
+}
+
+.toast-btn-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--bg-content);
+}
+
+.toast-btn-primary:hover {
+  background: var(--accent-strong);
 }
 
 /* ============================================================

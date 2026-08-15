@@ -172,12 +172,26 @@
         </button>
       </div>
 
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+        <span class="toast-message"></span>
+        <span class="toast-actions"></span>
+      </div>
+
       <footer id="statusbar" class="statusbar">
         <div class="status-shortcuts">
           <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>O</kbd> <span data-i18n="shortcutOpen">abrir</span></span>
           <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>W</kbd> <span data-i18n="shortcutCloseTab">fechar aba</span></span>
           <span class="shortcut"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> <span data-i18n="shortcutTheme">tema</span></span>
         </div>
+        <button id="btn-pause" class="btn btn-ghost btn-icon status-pause" title="Pausar atualização automática" aria-label="Pausar atualização automática" data-i18n-title="pauseTooltip">
+          <svg class="icon-pause" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none">
+            <rect x="6" y="4" width="4" height="16" rx="1.5"/>
+            <rect x="14" y="4" width="4" height="16" rx="1.5"/>
+          </svg>
+          <svg class="icon-play" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none" hidden>
+            <path d="M7 4.5v15a1 1 0 0 0 1.52.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/>
+          </svg>
+        </button>
         <div class="status-messages" aria-live="polite">
           <span id="status-left">Pronto</span>
           <span id="status-right"></span>

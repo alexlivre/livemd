@@ -65,7 +65,24 @@ const enMessages = {
   searchPlaceholder: 'Find in document',
   searchPrev: 'Previous match',
   searchNext: 'Next match',
-  searchClose: 'Close search'
+  searchClose: 'Close search',
+  pauseTooltip: 'Pause auto-update',
+  resumeTooltip: 'Resume auto-update',
+  toastUpdated: 'Updated just now',
+  toastChanged: '{file} changed on disk',
+  toastRemoved: '{file} was removed from disk',
+  toastRecreated: '{file} is back on disk',
+  actSync: 'Sync',
+  actNotNow: 'Not now',
+  actSaveAs: 'Save as...',
+  actCloseTab: 'Close tab',
+  actKeep: 'Keep',
+  actOpenNewTab: 'Open in new tab',
+  actIgnore: 'Ignore',
+  toastSynced: 'Synced',
+  toastSaved: 'Saved to {file}',
+  saveError: 'Could not save: {msg}',
+  pendingTooltip: 'Pending changes'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -131,9 +148,26 @@ const ptMessages: Record<MsgKey, string> = {
   updateAvailable: 'Atualização {v} disponível',
   updateDownload: 'Ir para downloads',
   searchPlaceholder: 'Buscar no documento',
-  searchPrev: 'Resultado anterior',
-  searchNext: 'Próximo resultado',
-  searchClose: 'Fechar busca'
+  searchPrev: 'Anterior',
+  searchNext: 'Próxima',
+  searchClose: 'Fechar busca',
+  pauseTooltip: 'Pausar atualização automática',
+  resumeTooltip: 'Retomar atualização automática',
+  toastUpdated: 'Atualizado há instante',
+  toastChanged: '{file} foi alterado no disco',
+  toastRemoved: '{file} foi removido do disco',
+  toastRecreated: '{file} voltou ao disco',
+  actSync: 'Sincronizar',
+  actNotNow: 'Agora não',
+  actSaveAs: 'Salvar como...',
+  actCloseTab: 'Fechar aba',
+  actKeep: 'Manter',
+  actOpenNewTab: 'Abrir em nova aba',
+  actIgnore: 'Ignorar',
+  toastSynced: 'Sincronizado',
+  toastSaved: 'Salvo em {file}',
+  saveError: 'Não foi possível salvar: {msg}',
+  pendingTooltip: 'Alterações pendentes'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -199,7 +233,24 @@ const esMessages: Record<MsgKey, string> = {
   searchPlaceholder: 'Buscar en el documento',
   searchPrev: 'Resultado anterior',
   searchNext: 'Resultado siguiente',
-  searchClose: 'Cerrar búsqueda'
+  searchClose: 'Cerrar búsqueda',
+  pauseTooltip: 'Pausar actualización automática',
+  resumeTooltip: 'Reanudar actualización automática',
+  toastUpdated: 'Actualizado hace un momento',
+  toastChanged: '{file} cambió en el disco',
+  toastRemoved: '{file} fue eliminado del disco',
+  toastRecreated: '{file} volvió al disco',
+  actSync: 'Sincronizar',
+  actNotNow: 'Ahora no',
+  actSaveAs: 'Guardar como...',
+  actCloseTab: 'Cerrar pestaña',
+  actKeep: 'Mantener',
+  actOpenNewTab: 'Abrir en nueva pestaña',
+  actIgnore: 'Ignorar',
+  toastSynced: 'Sincronizado',
+  toastSaved: 'Guardado en {file}',
+  saveError: 'No se pudo guardar: {msg}',
+  pendingTooltip: 'Cambios pendientes'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {

@@ -1,12 +1,14 @@
 import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron';
 import type { FileEvent } from '@shared/types';
 import type { AppLanguage } from '@shared/i18n';
-import type { MdApi, OpenedFile, UpdateCheck, SearchResult } from '@shared/api';
+import type { MdApi, OpenedFile, UpdateCheck, SearchResult, SaveAsResult } from '@shared/api';
 
 const api: MdApi = {
   openDialog: () => ipcRenderer.invoke('file:open-dialog') as Promise<OpenedFile[]>,
   readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath) as Promise<OpenedFile>,
   allowRead: (filePath: string) => ipcRenderer.invoke('file:allow-read', filePath) as Promise<void>,
+  saveAs: (filePath: string, content: string) =>
+    ipcRenderer.invoke('file:save-as', { filePath, content }) as Promise<SaveAsResult | null>,
   closeTab: (filePath: string) => ipcRenderer.invoke('tab:close', filePath) as Promise<void>,
   revealInFolder: (filePath: string) =>
     ipcRenderer.invoke('shell:reveal', filePath) as Promise<void>,
