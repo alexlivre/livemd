@@ -84,6 +84,7 @@ const grace = new RemovalGrace();
 const pendingByPath = new Map<string, { content: string; modifiedAt: number }>();
 const recentlySaved = new Map<string, number>();
 let paused = readStoredPause();
+let pendingClickConsumed = false;
 
 let markdownPromise: Promise<typeof import('./markdown')> | null = null;
 
@@ -560,7 +561,13 @@ async function openPath(filePath: string): Promise<void> {
     setStatus(t('openingFile', { file: basename(filePath) }), '');
     await api.allowRead(filePath);
     const file = await api.readFile(filePath);
-    manager.add(file);
+    if (manager.hasOrphaned(file.filePath)) {
+      // The disk version opens next to the frozen tab instead of silently
+      // replacing the frozen content.
+      manager.addCopy(file);
+    } else {
+      manager.add(file);
+    }
     recordRecentFile(file.filePath);
     setStatus(t('openOk', { file: file.fileName }), 'ok');
   } catch (err) {
@@ -572,6 +579,7 @@ async function openPath(filePath: string): Promise<void> {
 async function consumePending(): Promise<void> {
   const filePath = await api.consumePendingPath();
   if (filePath) {
+    pendingClickConsumed = true;
     await openPath(filePath);
   }
 }
@@ -608,7 +616,7 @@ async function restoreSession(): Promise<void> {
 
   if (files.length === 0) return;
 
-  manager.addMany(files, session.activePath ?? undefined);
+  manager.addMany(files, pendingClickConsumed ? null : (session.activePath ?? undefined));
 
   const savedScroll = session.tabs.find((t) => t.filePath === session.activePath)?.scrollTop ?? 0;
   if (savedScroll > 0) {
@@ -796,6 +804,7 @@ function bindUi(): void {
   });
 
   api.onOpenPath((filePath) => {
+    pendingClickConsumed = true;
     void openPath(filePath);
   });
 

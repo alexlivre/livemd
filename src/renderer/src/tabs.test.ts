@@ -136,4 +136,20 @@ describe('TabManager orphaned state', () => {
     expect(m.getState().tabs[0].content).toBe('# frozen');
     expect(m.getState().tabs[1].content).toBe('# from disk');
   });
+
+  it('addMany with null keeps the current activation', () => {
+    const m = new TabManager();
+    const clicked = m.add(file('/clicked.md'));
+    m.addMany([file('/a.md'), file('/b.md')], null);
+    expect(m.getState().activeId).toBe(clicked.id);
+  });
+
+  it('addMany with an explicit path activates that tab', () => {
+    const m = new TabManager();
+    m.add(file('/clicked.md'));
+    m.addMany([file('/a.md'), file('/b.md')], '/a.md');
+    expect(m.getState().tabs.find((t) => t.filePath === '/a.md')?.id).toBe(
+      m.getState().activeId
+    );
+  });
 });
