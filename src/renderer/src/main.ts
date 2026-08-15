@@ -358,14 +358,14 @@ async function restoreSession(): Promise<void> {
 
 // ---- Code copy (event delegation on the content container) ----
 function bindCodeCopy(): void {
-  contentEl.addEventListener('click', (evt) => {
+  contentEl.addEventListener('click', async (evt) => {
     const target = evt.target as HTMLElement | null;
     if (!target) return;
     const btn = target.closest<HTMLButtonElement>('.code-copy');
     if (!btn) return;
     const code = btn.closest('.code-block')?.querySelector('code');
     if (!code) return;
-    api.copyText(code.textContent ?? '');
+    await api.copyText(code.textContent ?? '');
     btn.textContent = t('copied');
     window.setTimeout(() => {
       btn.textContent = t('copy');
@@ -381,7 +381,15 @@ function bindContentLinks(): void {
     const anchor = target.closest<HTMLAnchorElement>('a[href]');
     if (!anchor) return;
     const href = anchor.getAttribute('href') ?? '';
-    if (href.startsWith('#')) return;
+    if (href.startsWith('#')) {
+      evt.preventDefault();
+      const id = decodeURIComponent(href.slice(1));
+      const target =
+        document.getElementById(id) ??
+        document.querySelector<HTMLElement>(`[data-slug="${id}"]`);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     evt.preventDefault();
     if (/^(https?:|mailto:)/i.test(href)) {
       void api.openExternal(href);
