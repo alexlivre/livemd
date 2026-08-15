@@ -1,4 +1,4 @@
-import { contextBridge, clipboard, ipcRenderer, webUtils, webFrame } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron';
 import type { FileEvent } from '@shared/types';
 import type { AppLanguage } from '@shared/i18n';
 import type { MdApi, OpenedFile, UpdateCheck, SearchResult } from '@shared/api';
@@ -40,7 +40,8 @@ const api: MdApi = {
   // Electron 32+ removed File.path; use webUtils to resolve a real OS path
   // for files dropped into the renderer.
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
-  copyText: (text: string) => clipboard.writeText(text),
+  copyText: (text: string) =>
+    ipcRenderer.invoke('clipboard:write-text', text) as Promise<void>,
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
   getZoomFactor: () => webFrame.getZoomFactor()
 };

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -240,6 +240,10 @@ function registerIpc(win: BrowserWindow): void {
 
   ipcMain.handle('shell:reveal', (_evt, filePath: string): void => {
     shell.showItemInFolder(filePath);
+  });
+
+  ipcMain.handle('clipboard:write-text', (_evt, text: unknown): void => {
+    clipboard.writeText(typeof text === 'string' ? text : String(text));
   });
 
   ipcMain.handle('app:consume-pending', (): string | null => {
