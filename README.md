@@ -1,6 +1,6 @@
 # LiveMD
 
-> A Markdown reader for Windows that **watches the files you have open** and re-renders them the instant you save. Tabs, syntax highlighting, drag & drop, recent files — all local, all offline, no telemetry.
+> A Markdown reader for Windows that **watches the files you have open** and re-renders them the instant you save. Tabs, syntax highlighting, drag & drop, recent files — all local, no telemetry (only images inside a document load from the web, with `no-referrer`).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Electron 32](https://img.shields.io/badge/Electron-32-blue)](https://www.electronjs.org)
@@ -63,7 +63,7 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **In-document search** — `Ctrl+F` opens a search bar (Chromium find-in-page) with match count and next/previous navigation
 - **Session restore** — open tabs and their scroll positions are restored on the next launch
 - **Zoom** — `Ctrl+` / `Ctrl+-` / `Ctrl+0` adjust the zoom level
-- **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, renderer sandbox on, `contextIsolation` on, `file:read` gated behind a session allowlist, no remote content
+- **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, renderer sandbox on, `contextIsolation` on, `file:read` gated behind a session allowlist; remote **images** render but never leak the reading context (`referrerpolicy="no-referrer"`) and remote **scripts** are impossible
 - **NSIS installer** — per-user install (no admin), custom page asking to set LiveMD as the default app for Markdown files
 - **Flat UI, no native menus** — the Electron menu bar is removed; every action is an in-window control with shortcuts shown in the status bar
 
@@ -326,7 +326,7 @@ LiveMD is a local, read-only viewer, and it's built defensively:
 - **Content Security Policy** — `script-src 'self'`: no inline scripts or inline event handlers; the renderer attaches listeners via `addEventListener`.
 - **Sandboxed + isolated renderer** — `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`; the page only talks to the main process through the typed `window.mdApi` bridge (`src/shared/api.ts`).
 - **Path allowlist** — `file:read` only accepts paths the user has explicitly opened (dialog, drag & drop, recent files, or "Open with"); arbitrary reads over IPC are rejected.
-- **No remote content** — `window.open` is denied (`setWindowOpenHandler`) and `will-navigate` blocks **all** navigation; a dropped `file://` URL is converted into an open, and external links go through a protocol whitelist (`http`/`https`/`mailto`).
+- **No remote execution** — `window.open` is denied (`setWindowOpenHandler`) and `will-navigate` blocks **all** navigation; a dropped `file://` URL is converted into an open, and external links go through a protocol whitelist (`http`/`https`/`mailto`). Remote images are rendered (`img-src https:`), but DOMPurify tags them with `referrerpolicy="no-referrer"` so image hosts never see which file you are reading, and SVGs loaded via `<img>` are script-sandboxed.
 - **Read-only** — LiveMD renders and watches files; it never writes to them. Closing tabs stops the watchers (`tab:close` / `unwatchAll`).
 - **No secrets, no telemetry** — no accounts, no API keys, no analytics.
 
