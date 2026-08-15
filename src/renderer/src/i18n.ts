@@ -60,14 +60,15 @@ function notify(): void {
 }
 
 export async function initI18n(opts: {
+  osLocale: string | null;
   getOsLocale: () => Promise<string>;
   setLanguage: (lang: AppLanguage) => Promise<void>;
 }): Promise<void> {
   syncLang = opts.setLanguage;
   override = readStoredOverride();
-  osLang = mapOsLocale(await opts.getOsLocale());
+  const locale = opts.osLocale ?? (await opts.getOsLocale());
+  osLang = mapOsLocale(locale);
   effective = override === 'auto' ? osLang : override;
-  await syncLang(effective);
   notify();
 }
 

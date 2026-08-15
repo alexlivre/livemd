@@ -12,13 +12,18 @@ import { bindShortcuts } from './shortcuts';
 import { bindRecentMenu, bindLangMenu, type Popover } from './menus';
 import { checkForUpdate } from './update';
 import { saveSession, loadSession } from './session';
+import { splitMarkdown, SEGMENT_BYTES } from './segment';
 import { debounce } from '@shared/util';
+import { enablePerf, perfMark } from '@shared/perf';
 
 declare global {
   interface Window {
     mdApi: MdApi;
   }
 }
+
+enablePerf(new URLSearchParams(location.search).has('perf'));
+perfMark('renderer:start');
 
 const api = window.mdApi;
 
@@ -207,6 +212,55 @@ function renderEmpty(): void {
   }
 }
 
+const INCREMENTAL_RENDER_BYTES = 1024 * 1024;
+const FIRST_SEGMENT_BYTES = 96 * 1024;
+const SINGLE_PAINT_HTML_BYTES = 1024 * 1024;
+
+let renderVersion = 0;
+
+function idleSlice(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => resolve(), { timeout: 500 });
+    } else {
+      setTimeout(resolve, 16);
+    }
+  });
+}
+
+async function scheduleHighlight(container: HTMLElement): Promise<void> {
+  if (!container.querySelector('[data-hljs]')) return;
+  const { highlightCodeBlocksInIdle } = await import('./highlight');
+  highlightCodeBlocksInIdle(container);
+}
+
+function paintArticle(html: string): HTMLElement {
+  const singlePaint = html.length > SINGLE_PAINT_HTML_BYTES;
+  contentEl.style.display = singlePaint ? 'none' : '';
+  contentEl.innerHTML = `<article class="markdown-body">${html}</article>`;
+  if (singlePaint) contentEl.style.display = '';
+  return contentEl.firstElementChild as HTMLElement;
+}
+
+// Renders a large file segment by segment so the first content appears
+// quickly and the main thread only ever handles one segment at a time.
+async function renderIncremental(source: string, version: number): Promise<void> {
+  const { renderMarkdown } = await getMarkdown();
+  const [first, ...rest] = splitMarkdown(source, FIRST_SEGMENT_BYTES);
+  const segments = [first, ...splitMarkdown(rest.join('\n'), SEGMENT_BYTES)];
+  contentEl.innerHTML = '<article class="markdown-body"></article>';
+  const body = contentEl.firstElementChild as HTMLElement;
+
+  for (let i = 0; i < segments.length; i++) {
+    if (version !== renderVersion) return;
+    const segHtml = await renderMarkdown(segments[i] as string);
+    if (version !== renderVersion) return;
+    if (body.isConnected) body.insertAdjacentHTML('beforeend', segHtml);
+    if (i === 0) perfMark(`renderer:first-segment html=${(segHtml.length / 1024).toFixed(0)}KB`);
+    if (i < segments.length - 1) await idleSlice();
+  }
+}
+
 async function renderContent(state: { tabs: TabData[]; activeId: string | null }): Promise<void> {
   const active = state.activeId
     ? state.tabs.find((t) => t.id === state.activeId) ?? null
@@ -220,12 +274,25 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
   }
 
   let html = renderCache.get(active.filePath, active.content);
-  if (html === null) {
-    const { renderMarkdown } = await getMarkdown();
-    html = await renderMarkdown(active.content);
+  const incremental = active.content.length > INCREMENTAL_RENDER_BYTES;
+  const version = ++renderVersion;
+
+  if (html === null && incremental) {
+    await renderIncremental(active.content, version);
+    if (version !== renderVersion) return;
+    html = (contentEl.firstElementChild as HTMLElement).innerHTML;
     renderCache.set(active.filePath, active.content, html);
+  } else {
+    if (html === null) {
+      const { renderMarkdown } = await getMarkdown();
+      html = await renderMarkdown(active.content);
+      renderCache.set(active.filePath, active.content, html);
+    }
+    if (version !== renderVersion) return;
+    perfMark(`renderer:first-content html=${(html.length / 1024).toFixed(0)}KB`);
+    paintArticle(html);
   }
-  contentEl.innerHTML = `<article class="markdown-body">${html}</article>`;
+  renderCache.flush();
 
   if (pendingScrollTop !== null) {
     contentEl.scrollTop = pendingScrollTop;
@@ -239,6 +306,8 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
   contentEl.classList.remove('flash');
   void contentEl.offsetWidth;
   contentEl.classList.add('flash');
+
+  void scheduleHighlight(contentEl);
 }
 
 function formatTimestamp(ms: number): string {
@@ -318,6 +387,7 @@ function snapshotSession(): void {
   }));
   const active = state.activeId ? state.tabs.find((t) => t.id === state.activeId) : null;
   saveSession({ tabs, activePath: active ? active.filePath : null });
+  renderCache.flush();
 }
 
 async function restoreSession(): Promise<void> {
@@ -341,18 +411,11 @@ async function restoreSession(): Promise<void> {
 
   if (files.length === 0) return;
 
-  manager.addMany(files);
-
-  if (session.activePath) {
-    const state = manager.getState();
-    const target = state.tabs.find((t) => t.filePath === session.activePath);
-    if (target) manager.activate(target.id);
-  }
+  manager.addMany(files, session.activePath ?? undefined);
 
   const savedScroll = session.tabs.find((t) => t.filePath === session.activePath)?.scrollTop ?? 0;
   if (savedScroll > 0) {
     pendingScrollTop = savedScroll;
-    void renderContent(manager.getState());
   }
 }
 
@@ -555,24 +618,30 @@ function bindUi(): void {
 }
 
 async function bootstrap(): Promise<void> {
+  const osLocale = new URLSearchParams(location.search).get('lang');
   await initI18n({
+    osLocale: osLocale ?? null,
     getOsLocale: () => api.getOsLocale(),
     setLanguage: (lang) => api.setLanguage(lang)
   });
+  perfMark('renderer:i18n');
   applyStaticStrings();
 
-  void checkForUpdate(api, {
-    onUpdate: (v) => {
-      updateVersion = v;
-      applyStaticStrings();
-      btnAbout.classList.add('has-update');
-    }
-  });
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(
+      () => setTimeout(() => runUpdateCheck(), 5000),
+      { timeout: 3000 }
+    );
+  } else {
+    setTimeout(runUpdateCheck, 5000);
+  }
+
+  let sessionRestored = false;
 
   manager.subscribe((state) => {
     renderTabbar(state);
     void renderContent(state);
-    snapshotSession();
+    if (sessionRestored || state.tabs.length > 0) snapshotSession();
   });
 
   subscribeLang(() => {
@@ -593,6 +662,18 @@ async function bootstrap(): Promise<void> {
   );
 
   await restoreSession();
+  sessionRestored = true;
+  perfMark('renderer:bootstrap-done');
+}
+
+function runUpdateCheck(): void {
+  void checkForUpdate(api, {
+    onUpdate: (v) => {
+      updateVersion = v;
+      applyStaticStrings();
+      btnAbout.classList.add('has-update');
+    }
+  });
 }
 
 void bootstrap();

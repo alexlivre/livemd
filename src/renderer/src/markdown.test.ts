@@ -55,6 +55,31 @@ describe('renderMarkdown heading anchors', () => {
   });
 });
 
+describe('renderMarkdown two-pass code blocks', () => {
+  it('marks a language-tagged block for deferred highlighting', async () => {
+    const html = await renderMarkdown('```js\nconst x = 1;\n```');
+    expect(html).toContain('data-hljs="js"');
+    expect(html).toContain('class="code-block"');
+    expect(html).not.toContain('hljs-keyword');
+  });
+
+  it('marks an unlabelled block for auto-detection', async () => {
+    const html = await renderMarkdown('```\nplain text\n```');
+    expect(html).toContain('data-hljs="auto"');
+  });
+
+  it('skips auto-detection for oversized unlabelled blocks', async () => {
+    const html = await renderMarkdown(`\`\`\`\n${'x'.repeat(9000)}\n\`\`\``);
+    expect(html).not.toContain('data-hljs');
+  });
+
+  it('escapes code content on the first pass', async () => {
+    const html = await renderMarkdown('```html\n<script>alert(1)</script>\n```');
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+});
+
 describe('renderMarkdown remote images', () => {
   it('adds referrerpolicy="no-referrer" to remote images', async () => {
     const html = await renderMarkdown('![badge](https://img.shields.io/badge/a)');

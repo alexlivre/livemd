@@ -46,7 +46,7 @@ export class TabManager {
     return this.addMany([file])[0];
   }
 
-  addMany(files: OpenTabInput[]): TabData[] {
+  addMany(files: OpenTabInput[], activePath?: string): TabData[] {
     const added: TabData[] = [];
     for (const file of files) {
       const existing = this.tabs.find((t) => t.filePath === file.filePath);
@@ -67,7 +67,10 @@ export class TabManager {
     for (const tab of added) {
       if (!this.tabs.includes(tab)) this.tabs.push(tab);
     }
-    if (added.length > 0) this.activeId = added[added.length - 1].id;
+    if (added.length > 0) {
+      const target = activePath ? this.tabs.find((t) => t.filePath === activePath) : undefined;
+      this.activeId = target?.id ?? added[added.length - 1].id;
+    }
     this.emit();
     return added;
   }

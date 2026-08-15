@@ -1,50 +1,14 @@
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import hljs from 'highlight.js/lib/core';
 import { t as i18nT } from './i18n';
-import javascript from 'highlight.js/lib/languages/javascript';
-import typescript from 'highlight.js/lib/languages/typescript';
-import bash from 'highlight.js/lib/languages/bash';
-import json from 'highlight.js/lib/languages/json';
-import css from 'highlight.js/lib/languages/css';
-import xml from 'highlight.js/lib/languages/xml';
-import markdown from 'highlight.js/lib/languages/markdown';
-import python from 'highlight.js/lib/languages/python';
-import rust from 'highlight.js/lib/languages/rust';
-import go from 'highlight.js/lib/languages/go';
-import yaml from 'highlight.js/lib/languages/yaml';
-import sql from 'highlight.js/lib/languages/sql';
-
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('js', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('ts', typescript);
-hljs.registerLanguage('tsx', typescript);
-hljs.registerLanguage('jsx', javascript);
-hljs.registerLanguage('bash', bash);
-hljs.registerLanguage('sh', bash);
-hljs.registerLanguage('shell', bash);
-hljs.registerLanguage('json', json);
-hljs.registerLanguage('css', css);
-hljs.registerLanguage('html', xml);
-hljs.registerLanguage('xml', xml);
-hljs.registerLanguage('markdown', markdown);
-hljs.registerLanguage('md', markdown);
-hljs.registerLanguage('python', python);
-hljs.registerLanguage('py', python);
-hljs.registerLanguage('rust', rust);
-hljs.registerLanguage('rs', rust);
-hljs.registerLanguage('go', go);
-hljs.registerLanguage('yaml', yaml);
-hljs.registerLanguage('yml', yaml);
-hljs.registerLanguage('sql', sql);
+import { escapeAttr } from './util';
 
 marked.setOptions({
   gfm: true,
   breaks: false
 });
 
-const originalCode = marked.getDefaults().renderer?.code;
+export const AUTO_DETECT_CHAR_LIMIT = 8 * 1024;
 
 const usedHeadingIds = new Set<string>();
 
@@ -124,18 +88,17 @@ marked.use({
 
       const safe = isEscaped ? code : code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-      if (lang && hljs.getLanguage(lang)) {
-        try {
-          const highlighted = hljs.highlight(safe, { language: lang, ignoreIllegals: true }).value;
-          return `<div class="code-block"><button class="code-copy" type="button" aria-label="${i18nT('copyAria')}">${i18nT('copy')}</button><pre><code class="hljs language-${lang}">${highlighted}</code></pre></div>`;
-        } catch {
-          /* fall through */
-        }
-      }
-
-      const auto = hljs.highlightAuto(safe).value;
-      const cls = auto.includes('class="hljs') ? '' : ' class="hljs"';
-      return `<div class="code-block"><button class="code-copy" type="button" aria-label="${i18nT('copyAria')}">${i18nT('copy')}</button><pre><code${cls}>${auto}</code></pre></div>`;
+      // Syntax highlighting is deferred to a second pass (highlight.ts):
+      // the code is escaped here so the first paint never waits on hljs.
+      // data-hljs marks blocks for highlighting; unlabelled blocks larger
+      // than AUTO_DETECT_CHAR_LIMIT skip auto-detection entirely.
+      const langAttr = lang ? ` class="hljs language-${escapeAttr(lang)}"` : ' class="hljs"';
+      const hljsAttr = lang
+        ? ` data-hljs="${escapeAttr(lang)}"`
+        : code.length <= AUTO_DETECT_CHAR_LIMIT
+          ? ' data-hljs="auto"'
+          : '';
+      return `<div class="code-block"><button class="code-copy" type="button" aria-label="${i18nT('copyAria')}">${i18nT('copy')}</button><pre><code${langAttr}${hljsAttr}>${safe}</code></pre></div>`;
     }
   }
 });
@@ -143,7 +106,7 @@ marked.use({
 function sanitize(html: string): string {
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
-    ADD_ATTR: ['target', 'rel']
+    ADD_ATTR: ['target', 'rel', 'data-hljs']
   });
 }
 

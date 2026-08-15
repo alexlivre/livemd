@@ -7,6 +7,19 @@ import type { FSWatcher } from 'chokidar';
 import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
 import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES } from '@shared/constants';
 import { parseVersion, versionsDiffer } from '@shared/version';
+import { enablePerf, perfMark } from '@shared/perf';
+
+const PERF_ENABLED = process.env.LIVEMD_PERF === '1';
+
+enablePerf(PERF_ENABLED);
+perfMark('main:module-loaded');
+
+// Chromium switches proven in production by VS Code (src/main.ts): disable
+// the native window occlusion tracker and establish the GPU channel
+// asynchronously so the first paint is not blocked on it.
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('enable-features', 'EarlyEstablishGpuChannel,EstablishGpuChannelAsync');
+app.commandLine.appendSwitch('disable-blink-features', 'StandardizedBrowserZoom');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -177,6 +190,12 @@ function deliverOpenPath(filePath: string): void {
   focusMainWindow();
 }
 
+function startWatch(filePath: string, win: BrowserWindow): void {
+  void watchFile(filePath, win).catch((err) => {
+    console.warn(`watch setup failed for ${filePath}: ${err instanceof Error ? err.message : String(err)}`);
+  });
+}
+
 function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('file:open-dialog', async () => {
     const result = await dialog.showOpenDialog(win, {
@@ -190,23 +209,27 @@ function registerIpc(win: BrowserWindow): void {
 
     if (result.canceled) return [];
 
-    const files: { filePath: string; fileName: string; content: string; modifiedAt: number }[] = [];
-    for (const filePath of result.filePaths) {
-      if (!isMarkdown(filePath)) continue;
-      try {
+    const candidates = result.filePaths.filter(isMarkdown);
+    const settled = await Promise.allSettled(
+      candidates.map(async (filePath) => {
         const { content, modifiedAt } = await readMarkdownFile(filePath);
-        files.push({
-          filePath,
-          fileName: path.basename(filePath),
-          content,
-          modifiedAt
-        });
-        await watchFile(filePath, win);
-        trustPath(filePath);
-      } catch (err) {
+        return { filePath, fileName: path.basename(filePath), content, modifiedAt };
+      })
+    );
+
+    const files: { filePath: string; fileName: string; content: string; modifiedAt: number }[] = [];
+    for (const filePath of candidates) {
+      trustPath(filePath);
+      startWatch(filePath, win);
+    }
+    for (const resultItem of settled) {
+      if (resultItem.status === 'fulfilled') {
+        files.push(resultItem.value);
+      } else {
+        const err = resultItem.reason;
         dialog.showErrorBox(
           t(currentLang, 'errorOpening'),
-          `${filePath}\n${err instanceof Error ? err.message : String(err)}`
+          `${err instanceof Error ? err.message : String(err)}`
         );
       }
     }
@@ -219,7 +242,7 @@ function registerIpc(win: BrowserWindow): void {
     if (!readablePaths.has(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
     if (!isMarkdown(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
     const { content, modifiedAt } = await readMarkdownFile(resolved);
-    await watchFile(resolved, win);
+    startWatch(resolved, win);
     return {
       filePath: resolved,
       fileName: path.basename(resolved),
@@ -309,6 +332,7 @@ function registerIpc(win: BrowserWindow): void {
 }
 
 async function createWindow(): Promise<void> {
+  perfMark('main:create-window');
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -322,7 +346,8 @@ async function createWindow(): Promise<void> {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: true,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      spellcheck: false
     }
   });
 
@@ -361,13 +386,20 @@ async function createWindow(): Promise<void> {
   registerIpc(mainWindow);
 
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
+  const query = { lang: currentLang, ...(PERF_ENABLED ? { perf: '1' } : {}) };
   if (devUrl) {
-    await mainWindow.loadURL(devUrl);
+    const url = new URL(devUrl);
+    for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+    await mainWindow.loadURL(url.toString());
   } else {
-    await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'), { query });
   }
+  perfMark('main:did-finish-load');
 
-  mainWindow.once('ready-to-show', () => mainWindow?.show());
+  mainWindow.once('ready-to-show', () => {
+    perfMark('main:ready-to-show');
+    mainWindow?.show();
+  });
 
   mainWindow.webContents.on('did-finish-load', () => {
     if (pendingOpenPath && mainWindow) {
@@ -407,7 +439,13 @@ if (!gotTheLock) {
     pendingOpenPath = initialFromArgs;
   }
 
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => {
+    perfMark('app:ready');
+    if (PERF_ENABLED) {
+      setTimeout(() => app.exit(0), 30_000);
+    }
+    return createWindow();
+  });
 
   app.on('window-all-closed', () => {
     unwatchAll();
