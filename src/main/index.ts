@@ -279,9 +279,9 @@ function registerIpc(win: BrowserWindow): void {
     }
     if (content.length > MAX_FILE_BYTES) throw new Error(t(currentLang, 'fileTooLarge'));
 
-    const defaultPath = fsSync.existsSync(filePath)
-      ? suggestBackupPath(filePath, (candidate) => fsSync.existsSync(candidate))
-      : filePath;
+    // The frozen version is a safety copy: default to a backup name so it
+    // never collides with a file the deleting application may recreate.
+    const defaultPath = suggestBackupPath(filePath, (candidate) => fsSync.existsSync(candidate));
 
     const result = await dialog.showSaveDialog(win, {
       title: t(currentLang, 'actSaveAs'),
