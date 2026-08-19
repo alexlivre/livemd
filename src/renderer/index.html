@@ -74,26 +74,13 @@
         </button>
       </nav>
 
-      <main id="content" class="content">
-        <div class="empty-state">
-          <div class="empty-illustration" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 3 14 8 19 8"/>
-              <line x1="9" y1="13" x2="15" y2="13"/>
-              <line x1="9" y1="17" x2="15" y2="17"/>
-            </svg>
-          </div>
-          <h1>Nenhum arquivo aberto</h1>
-          <p>Abra um arquivo <code>.md</code> ou arraste pra cá.</p>
-          <button id="btn-open-empty" class="btn btn-primary">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Abrir arquivo
-          </button>
-        </div>
-      </main>
+      <div id="content-wrap">
+        <main id="content" class="content"></main>
+        <button id="btn-outline" class="btn btn-ghost btn-icon btn-outline" hidden title="Outline" data-i18n-title="outlineTooltip">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div id="outline-menu" class="recent-menu" hidden></div>
+      </div>
 
       <div id="drop-overlay" class="drop-overlay" aria-hidden="true">
         <div class="drop-card">

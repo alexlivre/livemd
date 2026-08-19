@@ -598,6 +598,41 @@ body {
   border-radius: 5px;
 }
 
+#content-wrap {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#content-wrap .content {
+  flex: 1;
+  min-height: 0;
+}
+
+.btn-outline {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+}
+
+#outline-menu {
+  position: absolute;
+  top: 48px;
+  right: 16px;
+  min-width: 280px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.outline-item.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

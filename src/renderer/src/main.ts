@@ -10,6 +10,7 @@ import { basename, errorMessage, escapeAttr, escapeHtml } from './util';
 import { bindDragAndDrop } from './drop';
 import { bindShortcuts } from './shortcuts';
 import { bindRecentMenu, bindLangMenu, type Popover } from './menus';
+import { bindOutline, refreshOutline } from './outline';
 import { checkForUpdate } from './update';
 import { saveSession, loadSession } from './session';
 import { splitMarkdown, SEGMENT_BYTES } from './segment';
@@ -33,6 +34,8 @@ initTheme();
 
 const tabsEl = document.getElementById('tabs') as HTMLDivElement;
 const contentEl = document.getElementById('content') as HTMLElement;
+const btnOutline = document.getElementById('btn-outline') as HTMLButtonElement;
+const outlineMenu = document.getElementById('outline-menu') as HTMLElement;
 const statusLeft = document.getElementById('status-left') as HTMLSpanElement;
 const statusRight = document.getElementById('status-right') as HTMLSpanElement;
 const btnNew = document.getElementById('btn-new') as HTMLButtonElement;
@@ -75,6 +78,7 @@ let pendingScrollTop: number | null = null;
 let lastFocused: HTMLElement | null = null;
 let recentPopover: Popover;
 let langPopover: Popover;
+let outlinePopover: Popover;
 
 const PAUSE_KEY = 'md-reader.pause';
 const toastEl = document.getElementById('toast') as HTMLDivElement;
@@ -288,6 +292,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
     renderEmpty();
     setStatus(t('ready'), '');
     setStatusRight('');
+    refreshOutline('', contentEl, btnOutline, outlineMenu);
     return;
   }
 
@@ -325,6 +330,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
   void contentEl.offsetWidth;
   contentEl.classList.add('flash');
 
+  refreshOutline(state.activeId ?? '', contentEl, btnOutline, outlineMenu);
   void scheduleHighlight(contentEl);
 }
 
@@ -782,6 +788,7 @@ function bindUi(): void {
 
   recentPopover = bindRecentMenu(btnRecent, recentMenu, openPath);
   langPopover = bindLangMenu(btnLang, langMenu);
+  outlinePopover = bindOutline(btnOutline, outlineMenu, contentEl);
   bindAbout();
   bindSearch();
 
@@ -795,6 +802,7 @@ function bindUi(): void {
     closeMenus: () => {
       recentPopover.close();
       langPopover.close();
+      outlinePopover.close();
       closeAbout();
     },
     onSearch: openSearch,
