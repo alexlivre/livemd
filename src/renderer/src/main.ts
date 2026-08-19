@@ -9,8 +9,9 @@ import { getEffectiveLang, initI18n, subscribe as subscribeLang, t } from './i18
 import { basename, errorMessage, escapeAttr, escapeHtml } from './util';
 import { bindDragAndDrop } from './drop';
 import { bindShortcuts } from './shortcuts';
-import { bindRecentMenu, bindLangMenu, type Popover } from './menus';
+import { bindRecentMenu, bindLangMenu, createPopover, type Popover } from './menus';
 import { bindOutline, refreshOutline } from './outline';
+import { buildStandaloneHtml, fetchCssText } from './export';
 import { checkForUpdate } from './update';
 import { saveSession, loadSession } from './session';
 import { splitMarkdown, SEGMENT_BYTES } from './segment';
@@ -44,6 +45,8 @@ const btnRecent = document.getElementById('btn-recent') as HTMLButtonElement;
 const recentMenu = document.getElementById('recent-menu') as HTMLDivElement;
 const btnLang = document.getElementById('btn-lang') as HTMLButtonElement;
 const langMenu = document.getElementById('lang-menu') as HTMLDivElement;
+const btnExport = document.getElementById('btn-export') as HTMLButtonElement;
+const exportMenu = document.getElementById('export-menu') as HTMLElement;
 const btnAbout = document.getElementById('btn-about') as HTMLButtonElement;
 const aboutModal = document.getElementById('about-modal') as HTMLDivElement;
 const aboutCloseBtn = document.getElementById('about-close') as HTMLButtonElement;
@@ -78,6 +81,7 @@ let pendingScrollTop: number | null = null;
 let lastFocused: HTMLElement | null = null;
 let recentPopover: Popover;
 let langPopover: Popover;
+let exportPopover: Popover;
 let outlinePopover: Popover;
 
 const PAUSE_KEY = 'md-reader.pause';
@@ -778,6 +782,35 @@ function zoomReset(): void {
   applyZoom(1);
 }
 
+function renderExportMenu(): void {
+  exportMenu.innerHTML = `
+    <button class="recent-menu-item" data-act="pdf">${escapeHtml(t('exportPdf'))}</button>
+    <button class="recent-menu-item" data-act="html">${escapeHtml(t('exportHtml'))}</button>
+    <button class="recent-menu-item" data-act="copy">${escapeHtml(t('copyAsHtml'))}</button>`;
+  exportMenu.querySelector<HTMLButtonElement>('[data-act="pdf"]')?.addEventListener('click', async () => {
+    exportPopover.close();
+    const res = await api.exportPdf();
+    if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
+  });
+  exportMenu.querySelector<HTMLButtonElement>('[data-act="html"]')?.addEventListener('click', async () => {
+    exportPopover.close();
+    const css = await fetchCssText();
+    const theme = document.documentElement.getAttribute('data-theme') || 'soft';
+    const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
+    const suggested = manager.getActive()?.filePath || 'document.md';
+    const res = await api.exportHtml(html, suggested);
+    if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
+  });
+  exportMenu.querySelector<HTMLButtonElement>('[data-act="copy"]')?.addEventListener('click', async () => {
+    exportPopover.close();
+    const css = await fetchCssText();
+    const theme = document.documentElement.getAttribute('data-theme') || 'soft';
+    const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
+    await api.copyText(html);
+    toast.show({ message: t('copied') });
+  });
+}
+
 function bindUi(): void {
   btnNew.addEventListener('click', () => void openFiles());
   btnTheme.addEventListener('click', () => toggleTheme());
@@ -788,6 +821,7 @@ function bindUi(): void {
 
   recentPopover = bindRecentMenu(btnRecent, recentMenu, openPath);
   langPopover = bindLangMenu(btnLang, langMenu);
+  exportPopover = createPopover(btnExport, exportMenu, renderExportMenu);
   outlinePopover = bindOutline(btnOutline, outlineMenu, contentEl);
   bindAbout();
   bindSearch();
@@ -802,6 +836,7 @@ function bindUi(): void {
     closeMenus: () => {
       recentPopover.close();
       langPopover.close();
+      exportPopover.close();
       outlinePopover.close();
       closeAbout();
     },
