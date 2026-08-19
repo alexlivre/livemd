@@ -408,6 +408,52 @@ async function createWindow(): Promise<void> {
     }
   });
 
+  // Native context menu — enables Copy/Cut/Paste/Select All on text selection
+  // and Copy Link Address on links. Without this, right-click on selectable
+  // content shows nothing (Electron 32+ with Menu.setApplicationMenu(null)).
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const template: Electron.MenuItemConstructorOptions[] = [];
+
+    if (params.linkURL) {
+      template.push({
+        label: t(currentLang, 'copyLink'),
+        click: () => clipboard.writeText(params.linkURL)
+      });
+      // Separate link action from text actions when both exist
+      if (params.editFlags.canCopy || params.editFlags.canSelectAll) {
+        template.push({ type: 'separator' });
+      }
+    }
+
+    if (params.isEditable) {
+      if (params.editFlags.canCut) {
+        template.push({ label: t(currentLang, 'cut'), role: 'cut' });
+      }
+      if (params.editFlags.canCopy) {
+        template.push({ label: t(currentLang, 'copy'), role: 'copy' });
+      }
+      if (params.editFlags.canPaste) {
+        template.push({ label: t(currentLang, 'paste'), role: 'paste' });
+      }
+      if (params.editFlags.canSelectAll) {
+        if (template.length > 0) template.push({ type: 'separator' });
+        template.push({ label: t(currentLang, 'selectAll'), role: 'selectAll' });
+      }
+    } else {
+      if (params.editFlags.canCopy) {
+        template.push({ label: t(currentLang, 'copy'), role: 'copy' });
+      }
+      if (params.editFlags.canSelectAll) {
+        if (template.length > 0) template.push({ type: 'separator' });
+        template.push({ label: t(currentLang, 'selectAll'), role: 'selectAll' });
+      }
+    }
+
+    if (template.length === 0) return;
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup({ window: mainWindow! });
+  });
+
   mainWindow.webContents.on('found-in-page', (_event, result) => {
     mainWindow?.webContents.send('search:found', {
       matches: result.matches,
