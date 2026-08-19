@@ -41,6 +41,9 @@ export interface MdApi {
   onFileEvent: (handler: (event: import('./types').FileEvent) => void) => () => void;
   getPathForFile: (file: File) => string;
   copyText: (text: string) => Promise<void>;
+  exportHtml: (html: string, suggestedName: string) => Promise<SaveAsResult | null>;
+  exportPdf: () => Promise<SaveAsResult | null>;
+  copyHtml: (html: string) => Promise<void>;
   setZoomFactor: (factor: number) => void;
   getZoomFactor: () => number;
 }

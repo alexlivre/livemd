@@ -309,6 +309,36 @@ function registerIpc(win: BrowserWindow): void {
     clipboard.writeText(typeof text === 'string' ? text : String(text));
   });
 
+  ipcMain.handle('file:export-pdf', async (): Promise<{ savedPath: string } | null> => {
+    if (!win || win.isDestroyed()) return null;
+    const pdf = await win.webContents.printToPDF({ printBackground: true });
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      title: t(currentLang, 'exportPdf'),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      defaultPath: 'document.pdf'
+    });
+    if (canceled || !filePath) return null;
+    await fs.writeFile(filePath, pdf);
+    return { savedPath: filePath };
+  });
+
+  ipcMain.handle('file:export-html', async (_evt, payload: unknown): Promise<{ savedPath: string } | null> => {
+    const { html, suggestedName } = payload as { html?: unknown; suggestedName?: unknown };
+    if (typeof html !== 'string' || typeof suggestedName !== 'string') return null;
+    if (!win || win.isDestroyed()) return null;
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      title: t(currentLang, 'exportHtml'),
+      defaultPath: suggestedName.replace(/\.md$/i, '.html'),
+      filters: [
+        { name: 'HTML', extensions: ['html', 'htm'] },
+        { name: t(currentLang, 'filterAll'), extensions: ['*'] }
+      ]
+    });
+    if (canceled || !filePath) return null;
+    await fs.writeFile(filePath, html, 'utf-8');
+    return { savedPath: filePath };
+  });
+
   ipcMain.handle('app:consume-pending', (): string | null => {
     const p = pendingOpenPath;
     pendingOpenPath = null;

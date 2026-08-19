@@ -44,6 +44,11 @@ const api: MdApi = {
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   copyText: (text: string) =>
     ipcRenderer.invoke('clipboard:write-text', text) as Promise<void>,
+  exportHtml: (html: string, suggestedName: string) =>
+    ipcRenderer.invoke('file:export-html', { html, suggestedName }) as Promise<SaveAsResult | null>,
+  exportPdf: () => ipcRenderer.invoke('file:export-pdf') as Promise<SaveAsResult | null>,
+  copyHtml: (html: string) =>
+    ipcRenderer.invoke('clipboard:write-text', html) as Promise<void>,
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
   getZoomFactor: () => webFrame.getZoomFactor()
 };
