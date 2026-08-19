@@ -86,7 +86,17 @@ const enMessages = {
   toastSynced: 'Synced',
   toastSaved: 'Saved to {file}',
   saveError: 'Could not save: {msg}',
-  pendingTooltip: 'Pending changes'
+  pendingTooltip: 'Pending changes',
+  outlineTooltip: 'Outline',
+  outlineTitle: 'Outline',
+  outlineEmpty: 'No headings',
+  exportTooltip: 'Export',
+  exportPdf: 'Save as PDF',
+  exportHtml: 'Save as HTML',
+  copyAsHtml: 'Copy as HTML',
+  globalSearchPlaceholder: 'Search in all tabs',
+  globalSearchEmpty: 'No matches',
+  globalSearchResults: '{n} matches in {m} files'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -175,7 +185,17 @@ const ptMessages: Record<MsgKey, string> = {
   toastSynced: 'Sincronizado',
   toastSaved: 'Salvo em {file}',
   saveError: 'Não foi possível salvar: {msg}',
-  pendingTooltip: 'Alterações pendentes'
+  pendingTooltip: 'Alterações pendentes',
+  outlineTooltip: 'Sumário',
+  outlineTitle: 'Sumário',
+  outlineEmpty: 'Sem títulos',
+  exportTooltip: 'Exportar',
+  exportPdf: 'Salvar como PDF',
+  exportHtml: 'Salvar como HTML',
+  copyAsHtml: 'Copiar como HTML',
+  globalSearchPlaceholder: 'Buscar em todas as abas',
+  globalSearchEmpty: 'Nenhum resultado',
+  globalSearchResults: '{n} resultados em {m} arquivos'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -262,7 +282,17 @@ const esMessages: Record<MsgKey, string> = {
   toastSynced: 'Sincronizado',
   toastSaved: 'Guardado en {file}',
   saveError: 'No se pudo guardar: {msg}',
-  pendingTooltip: 'Cambios pendientes'
+  pendingTooltip: 'Cambios pendientes',
+  outlineTooltip: 'Índice',
+  outlineTitle: 'Índice',
+  outlineEmpty: 'Sin encabezados',
+  exportTooltip: 'Exportar',
+  exportPdf: 'Guardar como PDF',
+  exportHtml: 'Guardar como HTML',
+  copyAsHtml: 'Copiar como HTML',
+  globalSearchPlaceholder: 'Buscar en todas las pestañas',
+  globalSearchEmpty: 'Sin resultados',
+  globalSearchResults: '{n} resultados en {m} archivos'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {
