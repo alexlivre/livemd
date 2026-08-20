@@ -99,6 +99,18 @@ const recentlySaved = new Map<string, number>();
 let paused = readStoredPause();
 let pendingClickConsumed = false;
 
+function highlightPreview(text: string, query: string): string {
+  const escText = escapeHtml(text);
+  if (!query) return escText;
+  const escQuery = escapeHtml(query);
+  const safe = escQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  try {
+    return escText.replace(new RegExp(safe, 'gi'), (m) => `<mark>${m}</mark>`);
+  } catch {
+    return escText;
+  }
+}
+
 const globalDebounced = debounce(() => {
   void (async () => {
     const q = globalInput.value.trim();
@@ -107,13 +119,14 @@ const globalDebounced = debounce(() => {
       globalCount.textContent = '';
       return;
     }
-    const tabs = manager.getState().tabs.map((t) => ({ filePath: t.filePath, fileName: t.fileName, content: (t as unknown as { content: string }).content || '' }));
+    const tabs = manager.getState().tabs.map((t) => ({ filePath: t.filePath, fileName: t.fileName, content: t.content ?? '' }));
     const recents = getRecentFiles()
       .filter((p) => !tabs.some((t) => t.filePath === p))
       .slice(0, 10);
     const recentContents = new Map<string, string>();
     for (const p of recents) {
       try {
+        await api.allowRead(p);
         const f = await api.readFile(p);
         recentContents.set(p, f.content.slice(0, 256 * 1024));
       } catch {
@@ -131,7 +144,7 @@ const globalDebounced = debounce(() => {
     globalResults.innerHTML = groups
       .map(
         (g) =>
-          `<div class="global-group"><div class="global-group-title">${escapeHtml(g.fileName)}<span class="global-group-path">${escapeHtml(g.filePath)}</span></div>${g.matches.map((m) => `<button class="global-match" data-path="${escapeAttr(g.filePath)}" data-line="${m.line}">${escapeHtml(m.preview.slice(0, 80))}</button>`).join('')}</div>`
+          `<div class="global-group"><div class="global-group-title">${escapeHtml(g.fileName)}<span class="global-group-path">${escapeHtml(g.filePath)}</span></div>${g.matches.map((m) => `<button class="global-match" data-path="${escapeAttr(g.filePath)}" data-line="${m.line}">${highlightPreview(m.preview.slice(0, 80), q)}</button>`).join('')}</div>`
       )
       .join('');
     for (const btn of globalResults.querySelectorAll<HTMLButtonElement>('.global-match')) {

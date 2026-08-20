@@ -22,7 +22,6 @@ export function buildOutline(contentEl: HTMLElement): OutlineItem[] {
 }
 
 let activeObserver: IntersectionObserver | null = null;
-const cache = new Map<string, OutlineItem[]>();
 
 function cssEscape(value: string): string {
   const c = (globalThis as unknown as { CSS?: { escape: (v: string) => string } }).CSS;
@@ -30,9 +29,8 @@ function cssEscape(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, (ch) => `\\${ch}`);
 }
 
-export function refreshOutline(tabId: string, contentEl: HTMLElement, trigger: HTMLButtonElement, menu: HTMLElement): void {
+export function refreshOutline(_tabId: string, contentEl: HTMLElement, trigger: HTMLButtonElement, menu: HTMLElement): void {
   const items = buildOutline(contentEl);
-  cache.set(tabId, items);
   trigger.hidden = items.length < 2;
   if (trigger.hidden) { menu.hidden = true; return; }
   renderOutlineMenu(menu, items, contentEl);
@@ -55,12 +53,17 @@ function renderOutlineMenu(menu: HTMLElement, items: OutlineItem[], contentEl: H
 
 function setupSpy(contentEl: HTMLElement, menu: HTMLElement): void {
   activeObserver?.disconnect();
-  const heads = [...contentEl.querySelectorAll('h1[id],h2[id],h3[id]')] as HTMLElement[];
+  const heads = [...contentEl.querySelectorAll('h1[id],h2[id],h3[id],h1[data-slug],h2[data-slug],h3[data-slug]')] as HTMLElement[];
   if (heads.length===0) return;
   activeObserver = new IntersectionObserver((entries)=>{
-    for (const e of entries) if (e.isIntersecting) {
-      const id = e.target.getAttribute('id') || e.target.getAttribute('data-slug') || '';
-      for (const b of menu.querySelectorAll('.outline-item')) b.classList.toggle('is-active', b.getAttribute('data-id')===id);
+    let bestId: string | null = null;
+    let bestRatio = 0;
+    for (const e of entries) if (e.isIntersecting && e.intersectionRatio > bestRatio) {
+      bestRatio = e.intersectionRatio;
+      bestId = e.target.getAttribute('id') || e.target.getAttribute('data-slug') || null;
+    }
+    if (bestId) {
+      for (const b of menu.querySelectorAll('.outline-item')) b.classList.toggle('is-active', b.getAttribute('data-id')===bestId);
     }
   }, {root: contentEl, threshold:0.5});
   heads.forEach(h=> activeObserver!.observe(h));

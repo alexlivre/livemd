@@ -20,15 +20,32 @@ export function searchInContent(content:string, query:string): {line:number;prev
 export function searchAll(query:string, tabs: {filePath:string,fileName:string,content:string}[], recentContents: Map<string,string>): GlobalSearchGroup[] {
   const groups: GlobalSearchGroup[] = [];
   const seen = new Set<string>();
+  let total = 0;
   for (const t of tabs) {
     seen.add(t.filePath);
     const m = searchInContent(t.content, query);
-    if (m.length) groups.push({ filePath:t.filePath, fileName:t.fileName, matches:m });
+    if (m.length) {
+      const remaining = 50 - total;
+      if (remaining <= 0) break;
+      const sliced = m.slice(0, remaining);
+      groups.push({ filePath:t.filePath, fileName:t.fileName, matches:sliced });
+      total += sliced.length;
+      if (total >= 50) break;
+    }
   }
-  for (const [fp, content] of recentContents) {
-    if (seen.has(fp)) continue;
-    const m = searchInContent(content, query);
-    if (m.length) groups.push({ filePath:fp, fileName: fp.split(/[\\/]/).pop()||fp, matches:m });
+  if (total < 50) {
+    for (const [fp, content] of recentContents) {
+      if (seen.has(fp)) continue;
+      const m = searchInContent(content, query);
+      if (m.length) {
+        const remaining = 50 - total;
+        if (remaining <= 0) break;
+        const sliced = m.slice(0, remaining);
+        groups.push({ filePath:fp, fileName: fp.split(/[\\/]/).pop()||fp, matches:sliced });
+        total += sliced.length;
+        if (total >= 50) break;
+      }
+    }
   }
-  return groups.slice(0,50);
+  return groups;
 }
