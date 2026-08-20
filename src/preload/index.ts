@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron';
 import type { FileEvent } from '@shared/types';
 import type { AppLanguage } from '@shared/i18n';
-import type { MdApi, OpenedFile, UpdateCheck, SearchResult, SaveAsResult } from '@shared/api';
+import type { Highlight, MdApi, OpenedFile, UpdateCheck, SearchResult, SaveAsResult } from '@shared/api';
 
 const api: MdApi = {
   openDialog: () => ipcRenderer.invoke('file:open-dialog') as Promise<OpenedFile[]>,
@@ -50,7 +50,16 @@ const api: MdApi = {
   copyHtml: (html: string) =>
     ipcRenderer.invoke('clipboard:write-text', html) as Promise<void>,
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
-  getZoomFactor: () => webFrame.getZoomFactor()
+  getZoomFactor: () => webFrame.getZoomFactor(),
+  loadHighlights: (filePath: string) =>
+    ipcRenderer.invoke('highlights:load', filePath) as Promise<Highlight[]>,
+  saveHighlights: (filePath: string, list: Highlight[]) =>
+    ipcRenderer.invoke('highlights:save', filePath, list) as Promise<void>,
+  onHighlightAdd: (handler: (text: string) => void) => {
+    const listener = (_: unknown, text: string) => handler(text);
+    ipcRenderer.on('highlight:add', listener);
+    return () => ipcRenderer.off('highlight:add', listener);
+  }
 };
 
 contextBridge.exposeInMainWorld('mdApi', api);

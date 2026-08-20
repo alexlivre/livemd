@@ -1,5 +1,12 @@
 import type { AppLanguage } from './i18n';
 
+export interface Highlight {
+  id: string;
+  text: string;
+  color: 'accent' | 'warning' | 'success';
+  createdAt: number;
+}
+
 export interface OpenedFile {
   filePath: string;
   fileName: string;
@@ -46,4 +53,7 @@ export interface MdApi {
   copyHtml: (html: string) => Promise<void>;
   setZoomFactor: (factor: number) => void;
   getZoomFactor: () => number;
+  loadHighlights: (filePath: string) => Promise<Highlight[]>;
+  saveHighlights: (filePath: string, list: Highlight[]) => Promise<void>;
+  onHighlightAdd: (handler: (text: string) => void) => () => void;
 }

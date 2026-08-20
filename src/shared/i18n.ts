@@ -96,7 +96,13 @@ const enMessages = {
   copyAsHtml: 'Copy as HTML',
   globalSearchPlaceholder: 'Search in all tabs',
   globalSearchEmpty: 'No matches',
-  globalSearchResults: '{n} matches in {m} files'
+  globalSearchResults: '{n} matches in {m} files',
+  highlight: 'Highlight',
+  highlightRemove: 'Remove highlight',
+  highlightColor: 'Highlight color',
+  palettePlaceholder: 'Type a command...',
+  paletteEmpty: 'No commands',
+  mermaidError: 'Could not render diagram'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -195,7 +201,13 @@ const ptMessages: Record<MsgKey, string> = {
   copyAsHtml: 'Copiar como HTML',
   globalSearchPlaceholder: 'Buscar em todas as abas',
   globalSearchEmpty: 'Nenhum resultado',
-  globalSearchResults: '{n} resultados em {m} arquivos'
+  globalSearchResults: '{n} resultados em {m} arquivos',
+  highlight: 'Destacar',
+  highlightRemove: 'Remover destaque',
+  highlightColor: 'Cor do destaque',
+  palettePlaceholder: 'Digite um comando...',
+  paletteEmpty: 'Nenhum comando',
+  mermaidError: 'Não foi possível renderizar o diagrama'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -292,7 +304,13 @@ const esMessages: Record<MsgKey, string> = {
   copyAsHtml: 'Copiar como HTML',
   globalSearchPlaceholder: 'Buscar en todas las pestañas',
   globalSearchEmpty: 'Sin resultados',
-  globalSearchResults: '{n} resultados en {m} archivos'
+  globalSearchResults: '{n} resultados en {m} archivos',
+  highlight: 'Resaltar',
+  highlightRemove: 'Quitar resaltado',
+  highlightColor: 'Color de resaltado',
+  palettePlaceholder: 'Escribe un comando...',
+  paletteEmpty: 'Sin comandos',
+  mermaidError: 'No se pudo renderizar el diagrama'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {

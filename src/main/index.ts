@@ -38,6 +38,38 @@ let mainWindow: BrowserWindow | null = null;
 let pendingOpenPath: string | null = null;
 
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
+const HIGHLIGHTS_FILE = path.join(app.getPath('userData'), 'highlights.json');
+
+interface Highlight {
+  id: string;
+  text: string;
+  color: 'accent' | 'warning' | 'success';
+  createdAt: number;
+}
+
+async function readHighlightsStore(): Promise<Record<string, Highlight[]>> {
+  try {
+    const raw = await fs.readFile(HIGHLIGHTS_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const out: Record<string, Highlight[]> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (Array.isArray(v)) out[k] = v as Highlight[];
+      }
+      return out;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeHighlightsStore(store: Record<string, Highlight[]>): Promise<void> {
+  await fs.mkdir(path.dirname(HIGHLIGHTS_FILE), { recursive: true });
+  const tmp = `${HIGHLIGHTS_FILE}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(store, null, 2), 'utf-8');
+  await fs.rename(tmp, HIGHLIGHTS_FILE);
+}
 
 interface Settings {
   language?: AppLanguage;
@@ -384,6 +416,34 @@ function registerIpc(win: BrowserWindow): void {
     }
   });
 
+  ipcMain.handle('highlights:load', async (_evt, filePath: unknown) => {
+    if (typeof filePath !== 'string') return [];
+    const store = await readHighlightsStore();
+    return store[filePath] ?? [];
+  });
+
+  ipcMain.handle('highlights:save', async (_evt, filePath: unknown, list: unknown) => {
+    if (typeof filePath !== 'string' || !Array.isArray(list)) return;
+    const store = await readHighlightsStore();
+    const capped = (list as Highlight[]).slice(0, 100);
+    store[filePath] = capped;
+    let total = Object.values(store).reduce((n, arr) => n + arr.length, 0);
+    if (total > 1000) {
+      const all: Array<{ key: string; hl: Highlight; idx: number }> = [];
+      for (const [k, arr] of Object.entries(store)) {
+        arr.forEach((hl, idx) => all.push({ key: k, hl, idx }));
+      }
+      all.sort((a, b) => (a.hl.createdAt ?? 0) - (b.hl.createdAt ?? 0));
+      const toRemove = total - 1000;
+      const removeSet = new Set(all.slice(0, toRemove).map((e) => `${e.key}::${e.hl.id}`));
+      for (const [k, arr] of Object.entries(store)) {
+        store[k] = arr.filter((hl) => !removeSet.has(`${k}::${hl.id}`));
+        if (store[k]!.length === 0) delete store[k];
+      }
+    }
+    await writeHighlightsStore(store);
+  });
+
   ipcMain.handle('search:find', (_evt, text: unknown, options: unknown) => {
     if (typeof text !== 'string' || text.length === 0) {
       mainWindow?.webContents.stopFindInPage('clearSelection');
@@ -476,6 +536,17 @@ async function createWindow(): Promise<void> {
       if (params.editFlags.canSelectAll) {
         if (template.length > 0) template.push({ type: 'separator' });
         template.push({ label: t(currentLang, 'selectAll'), role: 'selectAll' });
+      }
+    }
+
+    if (params.selectionText) {
+      const sel = params.selectionText.trim();
+      if (sel.length >= 2 && sel.length <= 300) {
+        if (template.length > 0) template.push({ type: 'separator' });
+        template.push({
+          label: t(currentLang, 'highlight'),
+          click: () => mainWindow?.webContents.send('highlight:add', params.selectionText)
+        });
       }
     }
 
