@@ -3,13 +3,12 @@ import { DEFAULT_THEME, type ThemeName } from '@shared/constants';
 export type { ThemeName };
 
 const STORAGE_KEY = 'md-reader.theme';
-const THEME_CYCLE: ThemeName[] = ['dark', 'soft'];
+const THEME_CYCLE: ThemeName[] = ['dark', 'soft', 'light'];
 
 function readStoredTheme(): ThemeName | null {
   try {
     const value = localStorage.getItem(STORAGE_KEY);
-    if (value === 'dark' || value === 'soft') return value;
-    if (value === 'light') return 'soft';
+    if (value === 'dark' || value === 'soft' || value === 'light') return value;
   } catch {
     /* localStorage may be disabled */
   }

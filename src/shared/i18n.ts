@@ -102,7 +102,17 @@ const enMessages = {
   highlightColor: 'Highlight color',
   palettePlaceholder: 'Type a command...',
   paletteEmpty: 'No commands',
-  mermaidError: 'Could not render diagram'
+  mermaidError: 'Could not render diagram',
+  themeLight: 'Light',
+  customCssTitle: 'Custom CSS',
+  customCssDesc: 'Add custom CSS to override styles. Saved to custom.css in app data.',
+  customCssPlaceholder: '/* Custom CSS */',
+  customCssSave: 'Save',
+  customCssClear: 'Clear',
+  customCssSaved: 'Custom CSS saved',
+  customCssCleared: 'Custom CSS cleared',
+  customCssTooltip: 'Custom CSS',
+  customCssPath: 'File: {path}'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -207,7 +217,17 @@ const ptMessages: Record<MsgKey, string> = {
   highlightColor: 'Cor do destaque',
   palettePlaceholder: 'Digite um comando...',
   paletteEmpty: 'Nenhum comando',
-  mermaidError: 'Não foi possível renderizar o diagrama'
+  mermaidError: 'Não foi possível renderizar o diagrama',
+  themeLight: 'Claro',
+  customCssTitle: 'CSS Personalizado',
+  customCssDesc: 'Adicione CSS para sobrescrever estilos. Salvo em custom.css nos dados do app.',
+  customCssPlaceholder: '/* CSS personalizado */',
+  customCssSave: 'Salvar',
+  customCssClear: 'Limpar',
+  customCssSaved: 'CSS personalizado salvo',
+  customCssCleared: 'CSS personalizado removido',
+  customCssTooltip: 'CSS Personalizado',
+  customCssPath: 'Arquivo: {path}'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -310,7 +330,17 @@ const esMessages: Record<MsgKey, string> = {
   highlightColor: 'Color de resaltado',
   palettePlaceholder: 'Escribe un comando...',
   paletteEmpty: 'Sin comandos',
-  mermaidError: 'No se pudo renderizar el diagrama'
+  mermaidError: 'No se pudo renderizar el diagrama',
+  themeLight: 'Claro',
+  customCssTitle: 'CSS Personalizado',
+  customCssDesc: 'Añade CSS para sobrescribir estilos. Guardado en custom.css en los datos de la app.',
+  customCssPlaceholder: '/* CSS personalizado */',
+  customCssSave: 'Guardar',
+  customCssClear: 'Limpiar',
+  customCssSaved: 'CSS personalizado guardado',
+  customCssCleared: 'CSS personalizado eliminado',
+  customCssTooltip: 'CSS Personalizado',
+  customCssPath: 'Archivo: {path}'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {

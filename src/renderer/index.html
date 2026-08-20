@@ -72,6 +72,12 @@
               <line x1="7" y1="12" x2="17" y2="12"/>
             </svg>
           </button>
+          <button id="btn-custom-css" class="btn btn-ghost btn-icon" title="Custom CSS" aria-label="Custom CSS" data-i18n-title="customCssTooltip">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 9 15a1.65 1.65 0 0 0-1-1.51V13a1.65 1.65 0 0 0 1-1.51 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 13.5 7.5 1.65 1.65 0 0 0 14.5 6V5a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1 1.51V11a1.65 1.65 0 0 0-1 1.51Z"/>
+            </svg>
+          </button>
           <button id="btn-about" class="btn btn-ghost btn-icon" aria-label="Sobre o LiveMD" data-i18n-aria="aboutTooltip">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
@@ -154,6 +160,24 @@
         <div id="palette-card" class="about-card palette-card" role="dialog" aria-modal="true" aria-label="Command palette">
           <input id="palette-input" class="palette-input" type="text" data-i18n-placeholder="palettePlaceholder" placeholder="Type a command..." autocomplete="off" spellcheck="false" />
           <ul id="palette-list" class="palette-list recent-menu-list" role="listbox"></ul>
+        </div>
+      </div>
+
+      <div id="custom-css-modal" class="about-backdrop" hidden>
+        <div id="custom-css-card" class="about-card" role="dialog" aria-modal="true" aria-labelledby="custom-css-title" style="text-align:left; width:min(640px, calc(100vw - 48px));">
+          <button id="custom-css-close" class="about-close" type="button" data-i18n-aria="aboutClose">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+          <h2 id="custom-css-title" style="margin:0 0 6px; font-size:16px; text-align:left;" data-i18n="customCssTitle">Custom CSS</h2>
+          <p id="custom-css-desc" class="about-desc" style="text-align:left; font-size:12px; margin:0 0 8px;" data-i18n="customCssDesc">Add custom CSS to override styles. Saved to custom.css in app data.</p>
+          <div id="custom-css-path" class="about-version" style="text-align:left; font-family:ui-monospace; font-size:11px; margin-bottom:8px; word-break:break-all;"></div>
+          <textarea id="custom-css-input" rows="14" style="width:100%; min-height:220px; resize:vertical; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-content); color:var(--text); font-family:ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size:12.5px; outline:none;" data-i18n-placeholder="customCssPlaceholder" placeholder="/* Custom CSS */"></textarea>
+          <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+            <button id="custom-css-clear" class="btn btn-ghost" type="button" data-i18n="customCssClear">Clear</button>
+            <button id="custom-css-save" class="btn btn-primary" type="button" data-i18n="customCssSave">Save</button>
+          </div>
         </div>
       </div>
 

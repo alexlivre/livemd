@@ -3,6 +3,7 @@ import type { MdApi } from '@shared/api';
 import { MESSAGES, type MsgKey } from '@shared/i18n';
 import { TabManager, type TabData } from './tabs';
 import { initTheme, toggleTheme } from './theme';
+import { initCustomCss, loadCustomCss, saveCustomCss, applyCustomCss, getCustomCssPathHint } from './customCss';
 import { RenderCache } from './renderCache';
 import { getRecentFiles, recordRecentFile, removeRecentFile } from './recent';
 import { getEffectiveLang, initI18n, subscribe as subscribeLang, t } from './i18n';
@@ -61,6 +62,13 @@ const aboutRepoLink = document.getElementById('about-repo-link') as HTMLButtonEl
 const aboutUpdate = document.getElementById('about-update') as HTMLDivElement;
 const aboutUpdateText = document.getElementById('about-update-text') as HTMLParagraphElement;
 const aboutUpdateBtn = document.getElementById('about-update-btn') as HTMLButtonElement;
+const btnCustomCss = document.getElementById('btn-custom-css') as HTMLButtonElement | null;
+const customCssModal = document.getElementById('custom-css-modal') as HTMLDivElement | null;
+const customCssClose = document.getElementById('custom-css-close') as HTMLButtonElement | null;
+const customCssInput = document.getElementById('custom-css-input') as HTMLTextAreaElement | null;
+const customCssSaveBtn = document.getElementById('custom-css-save') as HTMLButtonElement | null;
+const customCssClearBtn = document.getElementById('custom-css-clear') as HTMLButtonElement | null;
+const customCssPathEl = document.getElementById('custom-css-path') as HTMLDivElement | null;
 const searchbar = document.getElementById('searchbar') as HTMLDivElement;
 const searchInput = document.getElementById('search-input') as HTMLInputElement;
 const searchCount = document.getElementById('search-count') as HTMLSpanElement;
@@ -837,6 +845,91 @@ function bindAbout(): void {
   });
 }
 
+async function openCustomCss(): Promise<void> {
+  if (!customCssModal || !customCssInput || !customCssPathEl) return;
+  try {
+    const css = await loadCustomCss();
+    customCssInput.value = css;
+  } catch {
+    customCssInput.value = '';
+  }
+  customCssPathEl.textContent = t('customCssPath', { path: getCustomCssPathHint() });
+  customCssModal.hidden = false;
+  customCssInput.focus();
+}
+
+function closeCustomCss(): void {
+  if (!customCssModal || customCssModal.hidden) return;
+  customCssModal.hidden = true;
+  if (lastFocused) lastFocused.focus();
+}
+
+function bindCustomCss(): void {
+  if (!btnCustomCss || !customCssModal || !customCssClose || !customCssInput || !customCssSaveBtn || !customCssClearBtn) return;
+  btnCustomCss.addEventListener('click', () => {
+    lastFocused = btnCustomCss;
+    void openCustomCss();
+  });
+  customCssClose.addEventListener('click', closeCustomCss);
+  customCssModal.addEventListener('click', (evt) => {
+    if (evt.target === customCssModal) closeCustomCss();
+  });
+  customCssSaveBtn.addEventListener('click', async () => {
+    const css = customCssInput.value;
+    try {
+      await saveCustomCss(css);
+      applyCustomCss(css);
+      toast.show({ message: t('customCssSaved') });
+      closeCustomCss();
+    } catch (err) {
+      toast.show({ message: t('saveError', { msg: errorMessage(err) }), persist: true });
+    }
+  });
+  customCssClearBtn.addEventListener('click', async () => {
+    customCssInput.value = '';
+    try {
+      await saveCustomCss('');
+      applyCustomCss('');
+      toast.show({ message: t('customCssCleared') });
+      closeCustomCss();
+    } catch (err) {
+      toast.show({ message: t('saveError', { msg: errorMessage(err) }), persist: true });
+    }
+  });
+  customCssModal.addEventListener('keydown', (evt) => {
+    if (evt.key === 'Escape') {
+      closeCustomCss();
+      return;
+    }
+    if (evt.key !== 'Tab') return;
+    const focusable = customCssModal.querySelectorAll<HTMLElement>(
+      'button, textarea, a[href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (evt.shiftKey && active === first) {
+      evt.preventDefault();
+      last.focus();
+    } else if (!evt.shiftKey && active === last) {
+      evt.preventDefault();
+      first.focus();
+    }
+  });
+  // keep textarea in sync when file changes on disk (watcher)
+  const syncFromWatcher = (css: string): void => {
+    applyCustomCss(css);
+    if (!customCssModal.hidden && customCssInput) customCssInput.value = css;
+  };
+  if (typeof api.onCustomCssChanged === 'function') {
+    api.onCustomCssChanged(syncFromWatcher);
+  } else {
+    const aliased = api as unknown as { onCustomCssChange?: (h: (css: string) => void) => () => void };
+    if (typeof aliased.onCustomCssChange === 'function') aliased.onCustomCssChange(syncFromWatcher);
+  }
+}
+
 function openSearch(): void {
   searchbar.hidden = false;
   fabOpen.hidden = true;
@@ -1044,6 +1137,14 @@ function buildPaletteCommands(): PaletteCmd[] {
         void openAbout();
       }
     },
+    {
+      id: 'customCss',
+      label: t('customCssTitle'),
+      action: () => {
+        lastFocused = document.activeElement as HTMLElement | null;
+        void openCustomCss();
+      }
+    },
     { id: 'zoomIn', label: 'Zoom in', shortcut: 'Ctrl+=', action: () => zoomIn() },
     { id: 'zoomOut', label: 'Zoom out', shortcut: 'Ctrl+-', action: () => zoomOut() },
     { id: 'zoomReset', label: 'Reset zoom', shortcut: 'Ctrl+0', action: () => zoomReset() }
@@ -1070,7 +1171,10 @@ function handleOpenPalette(): void {
 
 function bindUi(): void {
   btnNew.addEventListener('click', () => void openFiles());
-  btnTheme.addEventListener('click', () => toggleTheme());
+  btnTheme.addEventListener('click', () => {
+    toggleTheme();
+    void loadCustomCss().then(applyCustomCss);
+  });
   fabOpen.addEventListener('click', () => void openFiles());
   bindCodeCopy();
   bindContentLinks();
@@ -1081,6 +1185,7 @@ function bindUi(): void {
   exportPopover = createPopover(btnExport, exportMenu, renderExportMenu);
   outlinePopover = bindOutline(btnOutline, outlineMenu, contentEl);
   bindAbout();
+  bindCustomCss();
   bindSearch();
   bindGlobalSearch();
 
@@ -1095,13 +1200,19 @@ function bindUi(): void {
       const active = manager.getActive();
       if (active) await onCloseTab(active.id);
     },
-    toggleTheme,
+    toggleTheme: () => {
+      const next = toggleTheme();
+      // ensure custom CSS survives theme re-paint
+      void loadCustomCss().then(applyCustomCss);
+      return next;
+    },
     closeMenus: () => {
       recentPopover.close();
       langPopover.close();
       exportPopover.close();
       outlinePopover.close();
       closeAbout();
+      closeCustomCss();
       closePalette();
     },
     onSearch: openSearch,
@@ -1150,6 +1261,7 @@ async function bootstrap(): Promise<void> {
   perfMark('renderer:i18n');
   applyStaticStrings();
   applyPauseUi();
+  void initCustomCss().catch(() => {});
 
   if (typeof requestIdleCallback === 'function') {
     requestIdleCallback(
