@@ -8,7 +8,7 @@
 [![Windows 10+](https://img.shields.io/badge/Windows-10%2B-0078D6)](https://www.microsoft.com/windows)
 [![Release](https://img.shields.io/github/v/release/alexlivre/livemd)](https://github.com/alexlivre/livemd/releases)
 
-**Live reload** · **Tabs** · **Syntax highlighting** · **Search** · **2 themes**
+**Live reload** · **Tabs** · **Syntax highlighting** · **Search** · **3 themes**
 
 ---
 
@@ -56,7 +56,7 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **Drag & drop** — drop `.md` files from Explorer anywhere on the window; a "Solte para abrir" overlay shows while dragging, and each file becomes a new tab
 - **Recent files** — last 10 opened files in a titlebar dropdown, clearable, click to reopen
 - **"Open with" integration** — file associations for `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`; single-instance lock focuses the running window and opens the file in a new tab
-- **Two themes** — `dark` and `soft` (default), toggled with `Ctrl+Shift+T` or the titlebar button; preference persisted per user
+- **Three themes** — `dark`, `soft` (default) and `light` (pure-white), cycled with `Ctrl+Shift+T` or the titlebar button; preference persisted per user
 - **Localized UI** — follows the OS language (pt-BR, en-US, es) with a manual override dropdown in the titlebar; unsupported OS locales fall back to English
 - **About dialog** — info button in the titlebar shows version, author, license and the repository link (opens in the browser)
 - **Update indicator** — a dot on the About button appears when a newer release exists (silent check once a day); the About dialog links to the downloads page
@@ -64,11 +64,15 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **Outline** — floating popover with h1-h3 and scroll-spy
 - **Export** — Save as PDF (printBackground) / HTML standalone / Copy as HTML
 - **Global search** — Ctrl+Shift+F across open tabs + recent files
+- **Sidebar** — file tree of the active file's folder (`Ctrl+B`), live refresh via `folder:list` + chokidar `folder:changed` watcher; click to open in a new tab
+- **Light theme** — third `light` theme (pure-white) alongside `dark`/`soft`; cycled `dark → soft → light` with `Ctrl+Shift+T`, all colors are CSS tokens in `:root[data-theme='...']`
+- **Custom CSS** — editor modal for `userData/custom.css` (`customCss:load`/`save` IPC) with live `insertCSS` injection and watcher hot-reload (`custom-css:changed`)
+- **Pinned tabs, reorder & per-file zoom** — pin/unpin (`Ctrl+P` or right-click, `📌` + `is-pinned`), drag to reorder, per-file zoom (`Ctrl+=`/`Ctrl+-`/`Ctrl+0`) persisted in `md-reader.zoom`
 - **Highlights** — persistent marks per file (select 2–300 chars → context menu or `Ctrl+H`), saved to `userData/highlights.json` and re-applied after every render
 - **Command palette** — `Ctrl+K` fuzzy palette for all actions (fuzzy + substring filter, limit 20)
 - **Mermaid & Math** — progressive rendering via dynamic `import('mermaid')`/`import('katex')` with silent fallback when not installed
 - **Session restore** — open tabs and their scroll positions are restored on the next launch
-- **Zoom** — `Ctrl+` / `Ctrl+-` / `Ctrl+0` adjust the zoom level
+- **Zoom** — `Ctrl+=` / `Ctrl+-` / `Ctrl+0` adjust the zoom level **per file** (persisted in `md-reader.zoom`, restored on tab switch)
 - **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, renderer sandbox on, `contextIsolation` on, `file:read` gated behind a session allowlist; remote **images** render but never leak the reading context (`referrerpolicy="no-referrer"`) and remote **scripts** are impossible
 - **NSIS installer** — per-user install (no admin), custom page asking to set LiveMD as the default app for Markdown files
 - **Flat UI, no native menus** — the Electron menu bar is removed; every action is an in-window control with shortcuts shown in the status bar
@@ -141,13 +145,19 @@ The status bar (bottom-left) reports what's happening — `Pronto`, `Lendo: file
 | --- | --- |
 | `Ctrl+O` | Open files (native dialog) |
 | `Ctrl+W` | Close active tab |
-| `Ctrl+Shift+T` | Toggle theme (`dark` ↔ `soft`) |
+| `Ctrl+Shift+T` | Toggle theme (`dark` → `soft` → `light`) |
+| `Ctrl+B` | Toggle sidebar |
+| `Ctrl+P` | Pin / unpin active tab |
+| `Ctrl+Shift+F` | Global search |
+| `Ctrl+K` | Command palette |
+| `Ctrl+H` | Add highlight (when text selected) |
 | `Ctrl+F` | Search in the current document |
-| `Ctrl+` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset |
+| `Ctrl+` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset (per-file) |
 | `←` / `→` | Cycle through tabs (with a tab focused) |
 | `Esc` | Close menus, search, or the About dialog |
 | Middle-click on tab | Close that tab |
-| Right-click on tab | Reveal the file in Explorer |
+| Right-click on tab | Pin/unpin (or `Shift+Right-click` to reveal in Explorer) |
+| Drag tab | Reorder tabs |
 
 ## Configuration
 
@@ -155,10 +165,12 @@ LiveMD has **no config files**. The only persisted settings live in `localStorag
 
 | Key | Content |
 | --- | --- |
-| `md-reader.theme` | Theme preference: `dark` or `soft` |
+| `md-reader.theme` | Theme preference: `dark`, `soft` or `light` |
 | `md-reader.recent` | Recent-files list, up to 10 paths |
 | `md-reader.lang` | UI language override: `auto`, `pt`, `en`, or `es` |
 | `md-reader.session` | Last session — open tabs and their scroll positions |
+| `md-reader.sidebar` | Sidebar visibility: `1` visible / `0` hidden |
+| `md-reader.zoom` | Per-file zoom map `{ [filePath]: number }` |
 | `md-reader.update-check` | Date of the last silent update check |
 
 The main process also mirrors the selected language in `userData/settings.json` so its native dialogs are localized from a cold start.
@@ -167,12 +179,15 @@ The main process also mirrors the selected language in `userData/settings.json` 
 
 ## Themes
 
-LiveMD ships exactly **two** themes:
+LiveMD ships exactly **three** themes:
 
 - **`soft`** — the default: light, warm, low-contrast reading surface
 - **`dark`** — low-light reading
+- **`light`** — pure-white variant of `soft` for high contrast / accessibility
 
-There is **no** `light` theme (a legacy stored value of `'light'` migrates to `soft`). The OS theme preference is intentionally ignored — the user's explicit choice wins. All colors are CSS tokens defined in the two `:root[data-theme='...']` blocks in `style.css`, so every UI element (including syntax highlighting) follows the active theme.
+The themes are cycled `dark → soft → light` with `Ctrl+Shift+T`. The OS theme preference is intentionally ignored — the user's explicit choice wins. All colors are CSS tokens defined in the three `:root[data-theme='...']` blocks in `style.css`, so every UI element (including syntax highlighting) follows the active theme. Custom CSS from `userData/custom.css` is layered on top via `insertCSS` and hot-reloads when the file changes.
+
+Custom CSS is edited in the settings modal (gear button in the titlebar) and persisted to `userData/custom.css` (`customCss:load` / `customCss:save` IPC) with a watcher that re-applies it live.
 
 ## How auto-reload works
 
@@ -216,19 +231,21 @@ src/
 ├── renderer/        # plain TS + DOM — NO React
 │   ├── index.html
 │   └── src/
-│       ├── main.ts       # wiring: tabs ↔ render ↔ IPC ↔ menus ↔ shortcuts
-│       ├── tabs.ts       # TabManager (tabs, active, close/activate/update)
+│       ├── main.ts       # wiring: tabs ↔ render ↔ IPC ↔ menus ↔ shortcuts ↔ sidebar/customCss
+│       ├── tabs.ts       # TabManager (tabs, active, pin/reorder, close/activate/update)
 │       ├── markdown.ts   # marked + DOMPurify + highlight.js (13 languages)
-│       ├── theme.ts      # dark/soft themes, persistence
+│       ├── theme.ts      # dark/soft/light themes (cycle 3), persistence
+│       ├── sidebar.ts    # file-tree sidebar (folder:list, toggle Ctrl+B)
+│       ├── customCss.ts  # Custom CSS load/save/apply (userData/custom.css)
 │       ├── recent.ts     # recent-files history (localStorage)
 │       ├── session.ts    # session restore (tabs + scroll)
 │       ├── renderCache.ts # rendered-HTML cache keyed by content hash
 │       ├── drop.ts       # drag & drop
 │       ├── menus.ts      # generic popover + recent/lang dropdowns
-│       ├── shortcuts.ts  # keyboard shortcuts
+│       ├── shortcuts.ts  # keyboard shortcuts (incl. Ctrl+B sidebar, Ctrl+P pin)
 │       ├── update.ts     # update check
 │       ├── util.ts       # basename, errorMessage, escapeHtml, escapeAttr
-│       └── style.css     # CSS tokens, both themes, layout
+│       └── style.css     # CSS tokens, three themes, layout (sidebar + is-pinned)
 └── shared/           # contract shared by all three layers
     ├── types.ts      # FileEvent, TabModel, IpcChannel
     ├── api.ts        # MdApi interface (window.mdApi)
@@ -258,8 +275,12 @@ scripts/
 | `app:get-version` | renderer → main | Read the app version |
 | `app:open-external` | renderer → main | Open a whitelisted URL (`http`/`https`/`mailto`) |
 | `app:check-update` | renderer → main | Check GitHub releases for a newer version |
+| `folder:list` | renderer → main | List Markdown files in a folder (max 100) + start `folder:changed` watcher |
+| `customCss:load` / `customCss:save` | renderer → main | Load/save `userData/custom.css` + `insertCSS` |
 | `search:find` / `search:stop` | renderer → main | Control find-in-page |
 | `file:event` | main → renderer | `changed` / `removed` / `error` watcher events |
+| `folder:changed` / `folder:event` | main → renderer | Folder changed notification (file added/removed) |
+| `custom-css:changed` | main → renderer | Custom CSS changed on disk (watcher) |
 | `app:open-path` | main → renderer | "Open with" path from a second instance |
 | `search:found` | main → renderer | find-in-page result (matches, active ordinal) |
 
@@ -300,7 +321,7 @@ npm install
 - **TypeScript strict** with per-target tsconfigs; path aliases `@shared/*` and `@renderer/*` are configured in `electron.vite.config.ts` **and** both tsconfigs — keep in sync.
 - **Code, comments and commits in English; UI strings are localized via `src/shared/i18n.ts` (pt/en/es — OS-detected with a manual override in the titlebar; unsupported locales fall back to English).**
 - **Security posture is fixed:** `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, CSP `script-src 'self'` (no inline scripts — attach listeners with `addEventListener`).
-- **Exactly two themes** (`dark`, `soft`) — new UI must use CSS tokens, never hardcoded colors.
+- **Exactly three themes** (`dark`, `soft`, `light`) — new UI must use CSS tokens, never hardcoded colors.
 
 ## Testing
 
@@ -340,8 +361,9 @@ LiveMD is a local, read-only viewer, and it's built defensively:
 
 - **Windows-only packaging** — NSIS x64 is the only packaging target. The app can be run in dev mode on macOS/Linux, but installers are Windows-only.
 - **Read-only viewer** — LiveMD renders and live-reloads; it does not edit or save files.
-- **Exactly two themes** — there is deliberately no `light` theme.
-- **Watch scope** — live reload covers files open in tabs; a closed tab's watcher is released.
+- **Three themes** — `dark`, `soft` (default) and `light` (pure-white).
+- **Custom CSS** — `userData/custom.css` overrides are optional and hot-reloaded; invalid CSS is ignored.
+- **Watch scope** — live reload covers files open in tabs; a closed tab's watcher is released. The sidebar folder watcher covers `depth: 0` and at most 100 Markdown files per folder.
 - **File types** — only Markdown extensions (`.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`) are accepted by the open dialog and drag & drop.
 
 ## Code signing policy
