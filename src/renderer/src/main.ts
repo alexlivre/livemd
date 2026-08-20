@@ -50,7 +50,6 @@ const statusLeft = document.getElementById('status-left') as HTMLSpanElement;
 const statusRight = document.getElementById('status-right') as HTMLSpanElement;
 const btnNew = document.getElementById('btn-new') as HTMLButtonElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
-const themeMenu = document.getElementById('theme-menu') as HTMLElement;
 const themeEditorModal = document.getElementById('theme-editor-modal') as HTMLDivElement | null;
 const themeEditorClose = document.getElementById('theme-editor-close') as HTMLButtonElement | null;
 const themeEditorCancel = document.getElementById('theme-editor-cancel') as HTMLButtonElement | null;
@@ -58,6 +57,7 @@ const themeEditorSave = document.getElementById('theme-editor-save') as HTMLButt
 const themeEditorName = document.getElementById('theme-editor-name') as HTMLInputElement | null;
 const themeEditorCss = document.getElementById('theme-editor-css') as HTMLTextAreaElement | null;
 const themeEditorTitle = document.getElementById('theme-editor-title') as HTMLElement | null;
+const customThemesMenu = document.getElementById('custom-themes-menu') as HTMLElement;
 const btnRecent = document.getElementById('btn-recent') as HTMLButtonElement;
 const recentMenu = document.getElementById('recent-menu') as HTMLDivElement;
 const btnLang = document.getElementById('btn-lang') as HTMLButtonElement;
@@ -152,7 +152,7 @@ let recentPopover: Popover;
 let langPopover: Popover;
 let exportPopover: Popover;
 let outlinePopover: Popover;
-let themePopover: Popover;
+let customThemesPopover: Popover;
 let editingThemeId: string | null = null;
 
 const PAUSE_KEY = 'md-reader.pause';
@@ -1251,21 +1251,9 @@ function renderExportMenu(): void {
   });
 }
 
-async function renderThemeMenu(): Promise<void> {
-  const effective = getEffectiveTheme();
+async function renderCustomThemesMenu(): Promise<void> {
   const activeCustomId = getActiveCustomId();
   const customThemes = await listCustomThemes().catch(() => [] as CustomTheme[]);
-  const official: Array<{ id: 'dark' | 'soft' | 'light'; label: string }> = [
-    { id: 'dark', label: 'Dark' },
-    { id: 'soft', label: 'Soft' },
-    { id: 'light', label: t('themeLight') }
-  ];
-  const officialHtml = official
-    .map(
-      (th) =>
-        `<li><button class="lang-menu-item ${effective === th.id && !activeCustomId ? 'is-active' : ''}" type="button" data-theme="${th.id}"><span class="lang-check" aria-hidden="true">✓</span><span class="recent-menu-name">${escapeHtml(th.label)}</span></button></li>`
-    )
-    .join('');
   let customHtml = '';
   if (customThemes.length === 0) {
     customHtml = `<div class="recent-empty" style="padding:8px 10px; font-size:11px;">${escapeHtml(t('themeEmptyCustom'))}</div>`;
@@ -1281,36 +1269,22 @@ async function renderThemeMenu(): Promise<void> {
       )
       .join('')}</ul>`;
   }
-  themeMenu.innerHTML = `
-    <div class="lang-menu-title">${escapeHtml(t('themeOfficial'))}</div>
-    <ul class="recent-menu-list">${officialHtml}</ul>
-    <div class="lang-menu-title" style="margin-top:8px;">${escapeHtml(t('themeCustom'))}</div>
+  customThemesMenu.innerHTML = `
+    <div class="lang-menu-title">${escapeHtml(t('themeCustom'))}</div>
     ${customHtml}
     <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
       <button class="recent-menu-item" type="button" data-act="create" style="justify-content:center; color:var(--accent); font-weight:600;">+ ${escapeHtml(t('themeCreate'))}</button>
-      <div class="recent-empty" style="padding:4px 0 0; font-size:10px; text-align:center; color:var(--text-muted);">${escapeHtml(t('themeOfficialProtected'))}</div>
     </div>
   `;
-  for (const btn of themeMenu.querySelectorAll<HTMLButtonElement>('[data-theme]')) {
-    btn.addEventListener('click', async () => {
-      const th = btn.dataset.theme as 'dark' | 'soft' | 'light';
-      if (th) {
-        setTheme(th);
-        await applyCustomThemeById(null);
-        themePopover.close();
-      }
-    });
-  }
-  for (const btn of themeMenu.querySelectorAll<HTMLButtonElement>('[data-custom-id]')) {
+  for (const btn of customThemesMenu.querySelectorAll<HTMLButtonElement>('[data-custom-id]')) {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.customId!;
       await applyCustomThemeById(id);
-      themePopover.close();
-      // re-render to update active check
-      void renderThemeMenu();
+      customThemesPopover.close();
+      void renderCustomThemesMenu();
     });
   }
-  for (const btn of themeMenu.querySelectorAll<HTMLButtonElement>('[data-edit-id]')) {
+  for (const btn of customThemesMenu.querySelectorAll<HTMLButtonElement>('[data-edit-id]')) {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = btn.dataset.editId!;
@@ -1319,7 +1293,7 @@ async function renderThemeMenu(): Promise<void> {
       openThemeEditor(ct);
     });
   }
-  for (const btn of themeMenu.querySelectorAll<HTMLButtonElement>('[data-delete-id]')) {
+  for (const btn of customThemesMenu.querySelectorAll<HTMLButtonElement>('[data-delete-id]')) {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = btn.dataset.deleteId!;
@@ -1329,14 +1303,14 @@ async function renderThemeMenu(): Promise<void> {
       try {
         await deleteCustomTheme(id);
         if (getActiveCustomId() === id) await applyCustomThemeById(null);
-        await renderThemeMenu();
+        await renderCustomThemesMenu();
         toast.show({ message: t('customCssCleared') });
       } catch (err) {
         toast.show({ message: t('saveError', { msg: errorMessage(err as unknown) }), persist: true });
       }
     });
   }
-  themeMenu.querySelector<HTMLButtonElement>('[data-act="create"]')?.addEventListener('click', () => {
+  customThemesMenu.querySelector<HTMLButtonElement>('[data-act="create"]')?.addEventListener('click', () => {
     openThemeEditor(null);
   });
 }
@@ -1347,8 +1321,8 @@ function openThemeEditor(theme: CustomTheme | null): void {
   themeEditorTitle.textContent = theme ? t('themeEditTitle') : t('themeCreateTitle');
   themeEditorName.value = theme ? theme.name : '';
   themeEditorCss.value = theme ? theme.css : ':root {\n  --bg-app: #f8f3e8;\n  --text: #3c2f1e;\n}\n';
-  themeMenu.hidden = true;
-  themePopover.close();
+  customThemesMenu.hidden = true;
+  customThemesPopover.close();
   themeEditorModal.hidden = false;
   setTimeout(() => themeEditorName?.focus(), 50);
 }
@@ -1376,7 +1350,7 @@ async function handleThemeEditorSave(): Promise<void> {
     const saved = await saveCustomTheme({ id: editingThemeId || undefined, name, css });
     await applyCustomThemeById(saved.id);
     closeThemeEditor();
-    await renderThemeMenu();
+    await renderCustomThemesMenu();
     toast.show({ message: t('customCssSaved') });
   } catch (err) {
     toast.show({ message: t('saveError', { msg: errorMessage(err as unknown) }), persist: true });
@@ -1516,11 +1490,16 @@ function bindUi(): void {
   bindContentLinks();
   bindPauseToggle();
 
+  btnTheme.addEventListener('click', () => {
+    const next = toggleTheme();
+    void applyCustomThemeById(null);
+    void loadCustomCss().then(applyCustomCss);
+  });
+  customThemesPopover = createPopover(btnCustomCss!, customThemesMenu, () => void renderCustomThemesMenu());
   recentPopover = bindRecentMenu(btnRecent, recentMenu, openPath);
   langPopover = bindLangMenu(btnLang, langMenu);
   exportPopover = createPopover(btnExport, exportMenu, renderExportMenu);
   outlinePopover = bindOutline(btnOutline, outlineMenu, contentEl);
-  themePopover = createPopover(btnTheme, themeMenu, () => void renderThemeMenu());
   bindAbout();
   bindCustomCss();
   bindThemeEditor();
@@ -1550,7 +1529,7 @@ function bindUi(): void {
       langPopover.close();
       exportPopover.close();
       outlinePopover.close();
-      themePopover.close();
+      customThemesPopover.close();
       closeAbout();
       closeCustomCss();
       closeThemeEditor();

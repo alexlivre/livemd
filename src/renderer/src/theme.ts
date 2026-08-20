@@ -3,7 +3,7 @@ import { DEFAULT_THEME, type ThemeName } from '@shared/constants';
 export type { ThemeName };
 
 const STORAGE_KEY = 'md-reader.theme';
-const THEME_CYCLE: ThemeName[] = ['dark', 'soft', 'light'];
+const THEME_CYCLE: ThemeName[] = ['dark', 'soft'];
 
 function readStoredTheme(): ThemeName | null {
   try {

@@ -15,9 +15,8 @@ describe('theme', () => {
     expect(getEffectiveTheme()).toBe('light');
   });
 
-  it('cycles dark -> soft -> light', () => {
-    // default is soft, cycle is dark -> soft -> light -> dark
-    expect(toggleTheme()).toBe('light');
+  it('cycles dark -> soft', () => {
+    // default is soft, cycle is dark <-> soft (sun/moon toggles only dark/soft)
     expect(toggleTheme()).toBe('dark');
     expect(toggleTheme()).toBe('soft');
   });
