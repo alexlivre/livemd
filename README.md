@@ -22,6 +22,7 @@
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Configuration](#configuration)
 - [Themes](#themes)
+  - [Custom Themes](./docs/custom-themes.md)
 - [How auto-reload works](#how-auto-reload-works)
 - [How "Open with" works](#how-open-with-works)
 - [Architecture](#architecture)
@@ -188,6 +189,25 @@ LiveMD ships exactly **three** themes:
 The themes are cycled `dark → soft → light` with `Ctrl+Shift+T`. The OS theme preference is intentionally ignored — the user's explicit choice wins. All colors are CSS tokens defined in the three `:root[data-theme='...']` blocks in `style.css`, so every UI element (including syntax highlighting) follows the active theme. Custom CSS from `userData/custom.css` is layered on top via `insertCSS` and hot-reloads when the file changes.
 
 Custom CSS is edited in the settings modal (gear button in the titlebar) and persisted to `userData/custom.css` (`customCss:load` / `customCss:save` IPC) with a watcher that re-applies it live.
+
+> **Create your own theme → [Custom Themes Guide](./docs/custom-themes.md)** — how `userData/custom.css` works, all tokens, and 5 ready-to-copy examples (Sepia, Nord, High-contrast, Dracula, etc.).
+
+**Example — Sepia warm theme** (paste in `custom.css`):
+
+```css
+/* %APPDATA%\LiveMD\custom.css — works on any base theme */
+:root {
+  --bg-app: #f8f3e8;
+  --bg-content: #fdf8ef;
+  --bg-code: #f3ead9;
+  --border: #e8dcc6;
+  --text: #3c2f1e;
+  --accent: #b45309;
+  --accent-soft: rgba(180,83,9,0.12);
+}
+```
+
+See the guide for Nord, Dracula, high-contrast, and tips on scoping with `:root[data-theme='dark']`.
 
 ## How auto-reload works
 
