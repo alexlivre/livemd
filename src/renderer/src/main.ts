@@ -23,6 +23,7 @@ import { enablePerf, perfMark } from '@shared/perf';
 import { addHighlight, loadHighlights, saveHighlights, renderHighlights } from './highlights';
 import { registerCommands, openPalette, closePalette, type PaletteCmd } from './palette';
 import { renderMermaid, renderMath } from './mermaidMath';
+import { bindSidebar, refreshSidebar, toggleSidebar, setSidebarContext } from './sidebar';
 
 declare global {
   interface Window {
@@ -76,6 +77,9 @@ const REPO_RELEASES_URL = `${REPO_URL}/releases`;
 
 let updateVersion: string | null = null;
 const fabOpen = document.getElementById('fab-open') as HTMLButtonElement;
+const btnSidebar = document.getElementById('btn-sidebar') as HTMLButtonElement | null;
+const sidebarEl = document.getElementById('sidebar') as HTMLElement | null;
+const sidebarListEl = document.getElementById('sidebar-list') as HTMLElement | null;
 
 let zoomFactor = 1;
 const ZOOM_MIN = 0.5;
@@ -101,6 +105,18 @@ const pendingByPath = new Map<string, { content: string; modifiedAt: number }>()
 const recentlySaved = new Map<string, number>();
 let paused = readStoredPause();
 let pendingClickConsumed = false;
+
+function getFolderFromPath(filePath: string): string {
+  const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  return idx > 0 ? filePath.slice(0, idx) : '';
+}
+
+function doRefreshSidebar(activePath: string | null): void {
+  if (!sidebarListEl || !activePath) return;
+  const folder = getFolderFromPath(activePath);
+  if (!folder) return;
+  void refreshSidebar(folder, activePath, sidebarListEl, openPath);
+}
 
 function highlightPreview(text: string, query: string): string {
   const escText = escapeHtml(text);
@@ -431,6 +447,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
   void renderMermaid(contentEl);
   void renderMath(contentEl);
   void applyHighlightsForFile(active.filePath);
+  doRefreshSidebar(active.filePath);
 }
 
 function formatTimestamp(ms: number): string {
@@ -1067,6 +1084,11 @@ function bindUi(): void {
   bindSearch();
   bindGlobalSearch();
 
+  if (btnSidebar && sidebarEl && sidebarListEl) {
+    setSidebarContext(sidebarListEl, openPath);
+    bindSidebar(btnSidebar, sidebarEl, sidebarListEl, openPath);
+  }
+
   bindShortcuts({
     openFiles,
     closeActiveTab: async () => {
@@ -1089,7 +1111,10 @@ function bindUi(): void {
     zoomOut,
     zoomReset,
     onHighlight: () => void handleAddHighlight(),
-    openPalette: () => handleOpenPalette()
+    openPalette: () => handleOpenPalette(),
+    toggleSidebar: () => {
+      if (sidebarEl) toggleSidebar(sidebarEl);
+    }
   });
 
   api.onHighlightAdd((text) => void handleHighlightFromText(text));
@@ -1140,6 +1165,8 @@ async function bootstrap(): Promise<void> {
   manager.subscribe((state) => {
     renderTabbar(state);
     void renderContent(state);
+    const active = state.activeId ? state.tabs.find((t) => t.id === state.activeId) : null;
+    if (active) doRefreshSidebar(active.filePath);
     if (sessionRestored || state.tabs.length > 0) snapshotSession();
   });
 

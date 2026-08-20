@@ -13,6 +13,7 @@ export interface ShortcutDeps {
   zoomReset: () => void;
   onHighlight?: () => void;
   openPalette?: () => void;
+  toggleSidebar?: () => void;
 }
 
 export function bindShortcuts(deps: ShortcutDeps): void {
@@ -50,6 +51,9 @@ export function bindShortcuts(deps: ShortcutDeps): void {
     } else if (isCtrl && key === 'k') {
       evt.preventDefault();
       deps.openPalette?.();
+    } else if (isCtrl && key === 'b') {
+      evt.preventDefault();
+      deps.toggleSidebar?.();
     } else if (evt.key === 'Escape') {
       if (deps.closeGlobalSearch?.()) return;
       deps.closeMenus();
