@@ -151,6 +151,10 @@ async function readCustomCssFile(): Promise<string> {
   }
 }
 
+function enhanceCssSpecificity(css: string): string {
+  return css.replace(/:root(?=\s*\{)/g, ':root, :root[data-theme="dark"], :root[data-theme="soft"], :root[data-theme="light"]');
+}
+
 async function applyCustomCss(win: BrowserWindow, css: string): Promise<void> {
   if (win.isDestroyed()) return;
   try {
@@ -163,7 +167,7 @@ async function applyCustomCss(win: BrowserWindow, css: string): Promise<void> {
   }
   if (!css) return;
   try {
-    customCssKey = await win.webContents.insertCSS(css);
+    customCssKey = await win.webContents.insertCSS(enhanceCssSpecificity(css));
   } catch {
     /* invalid CSS — ignore */
   }

@@ -26,6 +26,12 @@ export async function saveCustomCss(css: string): Promise<void> {
   await api.saveCustomCss(css);
 }
 
+function enhanceSpecificity(css: string): string {
+  // :root alone (0,1,0) is less specific than :root[data-theme="dark"] (0,1,1) used by built-in themes.
+  // Promote plain :root blocks so custom themes reliably override.
+  return css.replace(/:root(?=\s*\{)/g, ':root, :root[data-theme="dark"], :root[data-theme="soft"], :root[data-theme="light"]');
+}
+
 export function applyCustomCss(css: string): void {
   if (!css || !css.trim()) {
     if (styleEl) {
@@ -39,7 +45,7 @@ export function applyCustomCss(css: string): void {
     styleEl.id = 'custom-css';
     document.head.appendChild(styleEl);
   }
-  styleEl.textContent = css;
+  styleEl.textContent = enhanceSpecificity(css);
 }
 
 export async function initCustomCss(): Promise<void> {
