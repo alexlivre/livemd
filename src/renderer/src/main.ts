@@ -22,6 +22,7 @@ import { debounce } from '@shared/util';
 import { enablePerf, perfMark } from '@shared/perf';
 import { addHighlight, loadHighlights, saveHighlights, renderHighlights } from './highlights';
 import { registerCommands, openPalette, closePalette, type PaletteCmd } from './palette';
+import { renderMermaid, renderMath } from './mermaidMath';
 
 declare global {
   interface Window {
@@ -427,6 +428,8 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
 
   refreshOutline(state.activeId ?? '', contentEl, btnOutline, outlineMenu);
   void scheduleHighlight(contentEl);
+  void renderMermaid(contentEl);
+  void renderMath(contentEl);
   void applyHighlightsForFile(active.filePath);
 }
 
