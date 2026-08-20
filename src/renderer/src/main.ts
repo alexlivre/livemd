@@ -1043,11 +1043,9 @@ function closeCustomCss(): void {
 }
 
 function bindCustomCss(): void {
-  if (!btnCustomCss || !customCssModal || !customCssClose || !customCssInput || !customCssSaveBtn || !customCssClearBtn) return;
-  btnCustomCss.addEventListener('click', () => {
-    lastFocused = btnCustomCss;
-    void openCustomCss();
-  });
+  if (!customCssModal || !customCssClose || !customCssInput || !customCssSaveBtn || !customCssClearBtn) return;
+  // btnCustomCss now opens the custom-themes menu (gear), not the legacy single-file modal.
+  // Legacy modal is kept for manual testing via palette command but not bound to the gear button.
   customCssClose.addEventListener('click', closeCustomCss);
   customCssModal.addEventListener('click', (evt) => {
     if (evt.target === customCssModal) closeCustomCss();
