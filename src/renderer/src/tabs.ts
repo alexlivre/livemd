@@ -4,6 +4,7 @@ export interface TabData extends TabModel {
   content: string;
   orphaned?: boolean;
   pending?: boolean;
+  pinned?: boolean;
 }
 
 export type TabListener = (state: TabState) => void;
@@ -201,5 +202,34 @@ export class TabManager {
   closeByPath(filePath: string): void {
     const tab = this.tabs.find((t) => t.filePath === filePath);
     if (tab) this.close(tab.id);
+  }
+
+  pin(id: string): void {
+    const tab = this.tabs.find((t) => t.id === id);
+    if (!tab || tab.pinned) return;
+    tab.pinned = true;
+    this.emit();
+  }
+
+  unpin(id: string): void {
+    const tab = this.tabs.find((t) => t.id === id);
+    if (!tab || !tab.pinned) return;
+    tab.pinned = false;
+    this.emit();
+  }
+
+  isPinned(id: string): boolean {
+    return this.tabs.some((t) => t.id === id && !!t.pinned);
+  }
+
+  reorder(fromId: string, toId: string): void {
+    if (fromId === toId) return;
+    const fromIdx = this.tabs.findIndex((t) => t.id === fromId);
+    const toIdx = this.tabs.findIndex((t) => t.id === toId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const [moved] = this.tabs.splice(fromIdx, 1);
+    const insertAt = fromIdx < toIdx ? toIdx - 1 : toIdx;
+    this.tabs.splice(insertAt, 0, moved);
+    this.emit();
   }
 }

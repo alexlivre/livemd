@@ -9,13 +9,15 @@ describe('theme', () => {
     expect(getEffectiveTheme()).toBe('soft');
   });
 
-  it('migrates legacy light to soft', () => {
+  it('persists light theme', () => {
     localStorage.setItem('md-reader.theme', 'light');
-    expect(getStoredTheme()).toBe('soft');
-    expect(getEffectiveTheme()).toBe('soft');
+    expect(getStoredTheme()).toBe('light');
+    expect(getEffectiveTheme()).toBe('light');
   });
 
-  it('toggles dark <-> soft', () => {
+  it('cycles dark -> soft -> light', () => {
+    // default is soft, cycle is dark -> soft -> light -> dark
+    expect(toggleTheme()).toBe('light');
     expect(toggleTheme()).toBe('dark');
     expect(toggleTheme()).toBe('soft');
   });

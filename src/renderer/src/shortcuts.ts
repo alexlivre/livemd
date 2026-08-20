@@ -14,6 +14,7 @@ export interface ShortcutDeps {
   onHighlight?: () => void;
   openPalette?: () => void;
   toggleSidebar?: () => void;
+  togglePin?: () => void;
 }
 
 export function bindShortcuts(deps: ShortcutDeps): void {
@@ -54,6 +55,15 @@ export function bindShortcuts(deps: ShortcutDeps): void {
     } else if (isCtrl && key === 'b') {
       evt.preventDefault();
       deps.toggleSidebar?.();
+    } else if (isCtrl && key === 'p' && !evt.shiftKey) {
+      // Pin/unpin active tab — override browser Print
+      const target = evt.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || (target as HTMLElement).isContentEditable)) {
+        // allow native print when editing text? Still intercept pin but ignore if focused in editor?
+      } else {
+        evt.preventDefault();
+        deps.togglePin?.();
+      }
     } else if (evt.key === 'Escape') {
       if (deps.closeGlobalSearch?.()) return;
       deps.closeMenus();

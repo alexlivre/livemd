@@ -40,6 +40,7 @@ const api = window.mdApi;
 initTheme();
 
 const tabsEl = document.getElementById('tabs') as HTMLDivElement;
+let dragFromId: string | null = null;
 const contentEl = document.getElementById('content') as HTMLElement;
 const btnOutline = document.getElementById('btn-outline') as HTMLButtonElement;
 const outlineMenu = document.getElementById('outline-menu') as HTMLElement;
@@ -93,6 +94,44 @@ let zoomFactor = 1;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
 const ZOOM_STEP = 0.1;
+const ZOOM_STORAGE_KEY = 'md-reader.zoom';
+const zoomMap = new Map<string, number>(loadZoomMap());
+
+function loadZoomMap(): [string, number][] {
+  try {
+    const raw = localStorage.getItem(ZOOM_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.entries(parsed)
+      .filter(([, v]) => typeof v === 'number' && Number.isFinite(v))
+      .map(([k, v]) => [k, v as number]);
+  } catch {
+    return [];
+  }
+}
+
+function saveZoomMap(): void {
+  try {
+    const obj: Record<string, number> = {};
+    for (const [k, v] of zoomMap) obj[k] = v;
+    localStorage.setItem(ZOOM_STORAGE_KEY, JSON.stringify(obj));
+  } catch {
+    /* ignore */
+  }
+}
+
+function restoreZoomForPath(filePath: string): void {
+  const saved = zoomMap.get(filePath);
+  if (saved !== undefined) {
+    zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, saved));
+    api.setZoomFactor(zoomFactor);
+  } else {
+    if (zoomFactor !== 1) {
+      zoomFactor = 1;
+      api.setZoomFactor(1);
+    }
+  }
+}
 
 const manager = new TabManager();
 const renderCache = new RenderCache();
@@ -253,10 +292,19 @@ function refreshUi(): void {
   void renderContent(state);
 }
 
+function togglePinActive(): void {
+  const active = manager.getActive();
+  if (!active) return;
+  if (manager.isPinned(active.id)) manager.unpin(active.id);
+  else manager.pin(active.id);
+}
+
 function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void {
   tabsEl.replaceChildren();
 
-  for (const tab of state.tabs) {
+  const sorted = [...state.tabs].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+
+  for (const tab of sorted) {
     const el = document.createElement('button');
     el.className = 'tab';
     el.setAttribute('role', 'tab');
@@ -265,8 +313,11 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
     if (isActive) el.classList.add('is-active');
     if (tab.orphaned) el.classList.add('is-orphaned');
     if (tab.pending) el.classList.add('is-pending');
+    if (tab.pinned) el.classList.add('is-pinned');
     el.setAttribute('aria-selected', isActive ? 'true' : 'false');
     el.tabIndex = isActive ? 0 : -1;
+    el.draggable = true;
+    el.title = tab.pinned ? `${tab.filePath} (pinned)` : tab.filePath;
 
     const title = document.createElement('span');
     title.className = 'tab-title';
@@ -299,10 +350,58 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
 
     el.addEventListener('contextmenu', (evt) => {
       evt.preventDefault();
-      void api.revealInFolder(tab.filePath);
+      if (evt.shiftKey) {
+        void api.revealInFolder(tab.filePath);
+        return;
+      }
+      if (manager.isPinned(tab.id)) manager.unpin(tab.id);
+      else manager.pin(tab.id);
+    });
+
+    el.addEventListener('dragstart', (evt) => {
+      dragFromId = tab.id;
+      if (evt.dataTransfer) {
+        evt.dataTransfer.setData('text/plain', tab.id);
+        evt.dataTransfer.effectAllowed = 'move';
+      }
+    });
+    el.addEventListener('dragover', (evt) => {
+      evt.preventDefault();
+      if (evt.dataTransfer) evt.dataTransfer.dropEffect = 'move';
+      el.classList.add('drag-over');
+    });
+    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('drop', (evt) => {
+      evt.preventDefault();
+      el.classList.remove('drag-over');
+      const from = dragFromId ?? evt.dataTransfer?.getData('text/plain') ?? null;
+      if (from && from !== tab.id) manager.reorder(from, tab.id);
+      dragFromId = null;
+    });
+    el.addEventListener('dragend', () => {
+      dragFromId = null;
+      for (const c of tabsEl.children) c.classList.remove('drag-over');
     });
 
     tabsEl.appendChild(el);
+  }
+
+  if (!tabsEl.dataset['boundDrop']) {
+    tabsEl.dataset['boundDrop'] = '1';
+    tabsEl.addEventListener('dragover', (evt) => {
+      evt.preventDefault();
+      if (evt.dataTransfer) evt.dataTransfer.dropEffect = 'move';
+    });
+    tabsEl.addEventListener('drop', (evt) => {
+      evt.preventDefault();
+      const from = dragFromId ?? evt.dataTransfer?.getData('text/plain') ?? null;
+      if (!from) return;
+      const target = (evt.target as HTMLElement | null)?.closest?.('[data-tab-id]') as HTMLElement | null;
+      const toId = target?.getAttribute('data-tab-id') ?? null;
+      if (toId && from !== toId) manager.reorder(from, toId);
+      dragFromId = null;
+      for (const c of tabsEl.children) c.classList.remove('drag-over');
+    });
   }
 }
 
@@ -699,6 +798,7 @@ async function openPath(filePath: string): Promise<void> {
       manager.add(file);
     }
     recordRecentFile(file.filePath);
+    restoreZoomForPath(file.filePath);
     setStatus(t('openOk', { file: file.fileName }), 'ok');
   } catch (err) {
     removeRecentFile(filePath);
@@ -747,6 +847,9 @@ async function restoreSession(): Promise<void> {
   if (files.length === 0) return;
 
   manager.addMany(files, pendingClickConsumed ? null : (session.activePath ?? undefined));
+
+  const restoredActive = session.activePath ?? files[0]?.filePath ?? null;
+  if (restoredActive) restoreZoomForPath(restoredActive);
 
   const savedScroll = session.tabs.find((t) => t.filePath === session.activePath)?.scrollTop ?? 0;
   if (savedScroll > 0) {
@@ -973,6 +1076,11 @@ function bindSearch(): void {
 function applyZoom(factor: number): void {
   zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor));
   api.setZoomFactor(zoomFactor);
+  const active = manager.getActive();
+  if (active) {
+    zoomMap.set(active.filePath, zoomFactor);
+    saveZoomMap();
+  }
 }
 
 function zoomIn(): void {
@@ -1147,7 +1255,8 @@ function buildPaletteCommands(): PaletteCmd[] {
     },
     { id: 'zoomIn', label: 'Zoom in', shortcut: 'Ctrl+=', action: () => zoomIn() },
     { id: 'zoomOut', label: 'Zoom out', shortcut: 'Ctrl+-', action: () => zoomOut() },
-    { id: 'zoomReset', label: 'Reset zoom', shortcut: 'Ctrl+0', action: () => zoomReset() }
+    { id: 'zoomReset', label: 'Reset zoom', shortcut: 'Ctrl+0', action: () => zoomReset() },
+    { id: 'togglePin', label: 'Pin/unpin tab', shortcut: 'Ctrl+P', action: () => togglePinActive() }
   ];
   const recents = getRecentFiles();
   for (const p of recents) {
@@ -1225,7 +1334,8 @@ function bindUi(): void {
     openPalette: () => handleOpenPalette(),
     toggleSidebar: () => {
       if (sidebarEl) toggleSidebar(sidebarEl);
-    }
+    },
+    togglePin: () => togglePinActive()
   });
 
   api.onHighlightAdd((text) => void handleHighlightFromText(text));
@@ -1274,11 +1384,20 @@ async function bootstrap(): Promise<void> {
 
   let sessionRestored = false;
 
+  let lastZoomPath: string | null = null;
   manager.subscribe((state) => {
     renderTabbar(state);
     void renderContent(state);
     const active = state.activeId ? state.tabs.find((t) => t.id === state.activeId) : null;
-    if (active) doRefreshSidebar(active.filePath);
+    if (active) {
+      doRefreshSidebar(active.filePath);
+      if (active.filePath !== lastZoomPath) {
+        lastZoomPath = active.filePath;
+        restoreZoomForPath(active.filePath);
+      }
+    } else {
+      lastZoomPath = null;
+    }
     if (sessionRestored || state.tabs.length > 0) snapshotSession();
   });
 

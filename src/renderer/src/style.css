@@ -616,6 +616,29 @@ body {
   font-weight: bold;
 }
 
+.tab.is-pinned {
+  min-width: 48px;
+  max-width: 160px;
+  border-left: 3px solid var(--accent);
+  padding-left: 9px;
+  background: var(--bg-tab-active);
+}
+
+.tab.is-pinned .tab-title::before {
+  content: '📌 ';
+  font-size: 10px;
+}
+
+.tab.is-pinned.is-active {
+  border-left-color: var(--accent);
+  box-shadow: inset 0 2px 0 0 var(--accent);
+}
+
+.tab.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
 .tab-title {
   flex: 1;
   white-space: nowrap;
