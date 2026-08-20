@@ -56,4 +56,12 @@ export interface MdApi {
   loadHighlights: (filePath: string) => Promise<Highlight[]>;
   saveHighlights: (filePath: string, list: Highlight[]) => Promise<void>;
   onHighlightAdd: (handler: (text: string) => void) => () => void;
+  listFolder: (folderPath: string) => Promise<string[]>;
+  loadCustomCss: () => Promise<string>;
+  saveCustomCss: (css: string) => Promise<void>;
+  onCustomCssChanged: (handler: (css: string) => void) => () => void;
+  onFolderChanged: (handler: (folderPath: string) => void) => () => void;
+  // aliases for spec/plan compatibility
+  onCustomCssChange?: (handler: (css: string) => void) => () => void;
+  onFolderEvent?: (handler: (folderPath: string) => void) => () => void;
 }

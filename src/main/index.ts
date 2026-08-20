@@ -39,6 +39,11 @@ let pendingOpenPath: string | null = null;
 
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const HIGHLIGHTS_FILE = path.join(app.getPath('userData'), 'highlights.json');
+const CUSTOM_CSS_FILE = path.join(app.getPath('userData'), 'custom.css');
+
+let customCssKey: string | null = null;
+let customCssWatcher: FSWatcher | null = null;
+const folderWatchers = new Map<string, FSWatcher>();
 
 interface Highlight {
   id: string;
@@ -91,6 +96,85 @@ function writeSettings(partial: Settings): void {
   } catch {
     /* ignore */
   }
+}
+
+async function readCustomCssFile(): Promise<string> {
+  try {
+    return await fs.readFile(CUSTOM_CSS_FILE, 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+async function applyCustomCss(win: BrowserWindow, css: string): Promise<void> {
+  if (win.isDestroyed()) return;
+  try {
+    if (customCssKey) {
+      await win.webContents.removeInsertedCSS(customCssKey);
+      customCssKey = null;
+    }
+  } catch {
+    customCssKey = null;
+  }
+  if (!css) return;
+  try {
+    customCssKey = await win.webContents.insertCSS(css);
+  } catch {
+    /* invalid CSS — ignore */
+  }
+}
+
+async function watchCustomCss(win: BrowserWindow): Promise<void> {
+  if (customCssWatcher) return;
+  const chokidar = await getChokidar();
+  if (customCssWatcher) return;
+  // ensure file exists so chokidar can watch it
+  try {
+    await fs.mkdir(path.dirname(CUSTOM_CSS_FILE), { recursive: true });
+  } catch {
+    /* ignore */
+  }
+  const watcher = chokidar.watch(CUSTOM_CSS_FILE, {
+    ignoreInitial: true,
+    awaitWriteFinish: { stabilityThreshold: 80, pollInterval: 30 }
+  });
+  watcher.on('change', async () => {
+    const css = await readCustomCssFile();
+    await applyCustomCss(win, css);
+    if (!win.isDestroyed()) win.webContents.send('custom-css:changed', css);
+  });
+  watcher.on('add', async () => {
+    const css = await readCustomCssFile();
+    await applyCustomCss(win, css);
+    if (!win.isDestroyed()) win.webContents.send('custom-css:changed', css);
+  });
+  watcher.on('unlink', async () => {
+    await applyCustomCss(win, '');
+    if (!win.isDestroyed()) win.webContents.send('custom-css:changed', '');
+  });
+  customCssWatcher = watcher;
+}
+
+async function watchFolder(folderPath: string, win: BrowserWindow): Promise<void> {
+  if (folderWatchers.has(folderPath)) return;
+  const chokidar = await getChokidar();
+  if (folderWatchers.has(folderPath)) return;
+  const watcher = chokidar.watch(folderPath, {
+    ignoreInitial: true,
+    depth: 0,
+    awaitWriteFinish: { stabilityThreshold: 80, pollInterval: 30 }
+  });
+  const notify = () => {
+    if (win.isDestroyed()) return;
+    win.webContents.send('folder:changed', folderPath);
+    win.webContents.send('folder:event', folderPath);
+  };
+  watcher.on('add', notify);
+  watcher.on('unlink', notify);
+  watcher.on('change', notify);
+  watcher.on('addDir', notify);
+  watcher.on('unlinkDir', notify);
+  folderWatchers.set(folderPath, watcher);
 }
 
 let currentLang: AppLanguage = readSettings().language ?? mapOsLocale(app.getLocale());
@@ -217,6 +301,15 @@ function unwatchAll(): void {
   for (const filePath of [...watched.keys()]) {
     unwatchFile(filePath);
   }
+  for (const watcher of folderWatchers.values()) {
+    void watcher.close();
+  }
+  folderWatchers.clear();
+  if (customCssWatcher) {
+    void customCssWatcher.close();
+    customCssWatcher = null;
+  }
+  customCssKey = null;
 }
 
 function focusMainWindow(): void {
@@ -459,6 +552,38 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('search:stop', () => {
     mainWindow?.webContents.stopFindInPage('clearSelection');
   });
+
+  ipcMain.handle('folder:list', async (_evt, folderPath: unknown) => {
+    if (typeof folderPath !== 'string') return [];
+    try {
+      const entries = await fs.readdir(folderPath);
+      const files = entries.filter(isMarkdown).map((e) => path.join(folderPath, e)).slice(0, 100);
+      void watchFolder(folderPath, win).catch(() => {});
+      return files;
+    } catch {
+      return [];
+    }
+  });
+
+  const handleCustomCssLoad = async (): Promise<string> => readCustomCssFile();
+  const handleCustomCssSave = async (_evt: unknown, css: unknown): Promise<void> => {
+    if (typeof css !== 'string') throw new Error('invalid css');
+    await fs.mkdir(path.dirname(CUSTOM_CSS_FILE), { recursive: true });
+    await fs.writeFile(CUSTOM_CSS_FILE, css, 'utf-8');
+    await applyCustomCss(win, css);
+    if (!win.isDestroyed()) win.webContents.send('custom-css:changed', css);
+  };
+
+  ipcMain.handle('customCss:load', handleCustomCssLoad);
+  ipcMain.handle('custom-css:load', handleCustomCssLoad);
+  ipcMain.handle('customCss:save', handleCustomCssSave);
+  ipcMain.handle('custom-css:save', handleCustomCssSave);
+
+  // start watchers and inject existing custom.css
+  void watchCustomCss(win).catch(() => {});
+  void readCustomCssFile()
+    .then((css) => applyCustomCss(win, css))
+    .catch(() => {});
 }
 
 async function createWindow(): Promise<void> {

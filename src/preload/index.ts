@@ -59,7 +59,44 @@ const api: MdApi = {
     const listener = (_: unknown, text: string) => handler(text);
     ipcRenderer.on('highlight:add', listener);
     return () => ipcRenderer.off('highlight:add', listener);
+  },
+  listFolder: (folderPath: string) =>
+    ipcRenderer.invoke('folder:list', folderPath) as Promise<string[]>,
+  loadCustomCss: () => ipcRenderer.invoke('customCss:load') as Promise<string>,
+  saveCustomCss: (css: string) =>
+    ipcRenderer.invoke('customCss:save', css) as Promise<void>,
+  onCustomCssChanged: (handler: (css: string) => void) => {
+    const listener = (_: unknown, css: string) => handler(css);
+    ipcRenderer.on('custom-css:changed', listener);
+    return () => ipcRenderer.off('custom-css:changed', listener);
+  },
+  onFolderChanged: (handler: (folderPath: string) => void) => {
+    const listener = (_: unknown, fp: string) => handler(fp);
+    ipcRenderer.on('folder:changed', listener);
+    ipcRenderer.on('folder:event', listener);
+    return () => {
+      ipcRenderer.off('folder:changed', listener);
+      ipcRenderer.off('folder:event', listener);
+    };
+  },
+  // aliases for spec compatibility
+  onCustomCssChange: (handler: (css: string) => void) => {
+    const listener = (_: unknown, css: string) => handler(css);
+    ipcRenderer.on('custom-css:changed', listener);
+    return () => ipcRenderer.off('custom-css:changed', listener);
+  },
+  onFolderEvent: (handler: (folderPath: string) => void) => {
+    const listener = (_: unknown, fp: string) => handler(fp);
+    ipcRenderer.on('folder:changed', listener);
+    ipcRenderer.on('folder:event', listener);
+    return () => {
+      ipcRenderer.off('folder:changed', listener);
+      ipcRenderer.off('folder:event', listener);
+    };
   }
+} as MdApi & {
+  onCustomCssChange: (handler: (css: string) => void) => () => void;
+  onFolderEvent: (handler: (folderPath: string) => void) => () => void;
 };
 
 contextBridge.exposeInMainWorld('mdApi', api);
