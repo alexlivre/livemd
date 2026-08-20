@@ -64,6 +64,9 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **Outline** — floating popover with h1-h3 and scroll-spy
 - **Export** — Save as PDF (printBackground) / HTML standalone / Copy as HTML
 - **Global search** — Ctrl+Shift+F across open tabs + recent files
+- **Highlights** — persistent marks per file (select 2–300 chars → context menu or `Ctrl+H`), saved to `userData/highlights.json` and re-applied after every render
+- **Command palette** — `Ctrl+K` fuzzy palette for all actions (fuzzy + substring filter, limit 20)
+- **Mermaid & Math** — progressive rendering via dynamic `import('mermaid')`/`import('katex')` with silent fallback when not installed
 - **Session restore** — open tabs and their scroll positions are restored on the next launch
 - **Zoom** — `Ctrl+` / `Ctrl+-` / `Ctrl+0` adjust the zoom level
 - **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, renderer sandbox on, `contextIsolation` on, `file:read` gated behind a session allowlist; remote **images** render but never leak the reading context (`referrerpolicy="no-referrer"`) and remote **scripts** are impossible
