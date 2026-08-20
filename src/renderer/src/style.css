@@ -1543,3 +1543,26 @@ body {
 .global-group-path { color: var(--text-muted); font-weight:400; overflow:hidden; text-overflow:ellipsis; }
 .global-match { width:100%; text-align:left; padding:6px 8px; border:none; background:transparent; cursor:pointer; font-family: ui-monospace; font-size:12px; }
 .global-match:hover { background: var(--bg-tab-hover); }
+
+mark[data-hl-id] {
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent);
+  border-radius: 2px;
+  padding: 0.05em 0.15em;
+  color: inherit;
+}
+
+mark[data-hl-id][data-hl-color='warning'] {
+  background: rgba(224, 175, 104, 0.2);
+  border-bottom-color: var(--warning);
+}
+
+mark[data-hl-id][data-hl-color='success'] {
+  background: rgba(158, 206, 106, 0.2);
+  border-bottom-color: var(--success);
+}
+
+mark[data-hl-id][data-hl-color='accent'] {
+  background: var(--accent-soft);
+  border-bottom-color: var(--accent);
+}

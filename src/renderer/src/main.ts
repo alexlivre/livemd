@@ -20,6 +20,7 @@ import { Toast, type ToastAction } from './toast';
 import { RemovalGrace } from './pending';
 import { debounce } from '@shared/util';
 import { enablePerf, perfMark } from '@shared/perf';
+import { addHighlight, loadHighlights, saveHighlights, renderHighlights } from './highlights';
 
 declare global {
   interface Window {
@@ -425,6 +426,7 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
 
   refreshOutline(state.activeId ?? '', contentEl, btnOutline, outlineMenu);
   void scheduleHighlight(contentEl);
+  void applyHighlightsForFile(active.filePath);
 }
 
 function formatTimestamp(ms: number): string {
@@ -871,6 +873,52 @@ function zoomReset(): void {
   applyZoom(1);
 }
 
+async function applyHighlightsForFile(filePath: string): Promise<void> {
+  try {
+    const list = await loadHighlights(filePath);
+    renderHighlights(contentEl, list);
+  } catch {
+    /* ignore */
+  }
+}
+
+async function handleAddHighlight(): Promise<void> {
+  const active = manager.getActive();
+  if (!active) return;
+  const hl = addHighlight(contentEl, active.filePath, 'accent');
+  if (!hl) return;
+  try {
+    const list = await loadHighlights(active.filePath);
+    list.push(hl);
+    await saveHighlights(active.filePath, list);
+    renderHighlights(contentEl, list);
+  } catch {
+    /* ignore */
+  }
+}
+
+async function handleHighlightFromText(text: string): Promise<void> {
+  const active = manager.getActive();
+  if (!active) return;
+  const trimmed = text.trim();
+  if (trimmed.length < 2 || trimmed.length > 300) return;
+  if ((contentEl.textContent ?? '').indexOf(trimmed) === -1) return;
+  const hl = {
+    id: `hl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    text: trimmed,
+    color: 'accent' as const,
+    createdAt: Date.now()
+  };
+  try {
+    const list = await loadHighlights(active.filePath);
+    list.push(hl);
+    await saveHighlights(active.filePath, list);
+    renderHighlights(contentEl, list);
+  } catch {
+    /* ignore */
+  }
+}
+
 function renderExportMenu(): void {
   exportMenu.innerHTML = `
     <button class="recent-menu-item" data-act="pdf">${escapeHtml(t('exportPdf'))}</button>
@@ -935,8 +983,11 @@ function bindUi(): void {
     closeGlobalSearch,
     zoomIn,
     zoomOut,
-    zoomReset
+    zoomReset,
+    onHighlight: () => void handleAddHighlight()
   });
+
+  api.onHighlightAdd((text) => void handleHighlightFromText(text));
 
   api.onOpenPath((filePath) => {
     pendingClickConsumed = true;
