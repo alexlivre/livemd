@@ -12,6 +12,7 @@ import { bindShortcuts } from './shortcuts';
 import { bindRecentMenu, bindLangMenu, createPopover, type Popover } from './menus';
 import { bindOutline, refreshOutline } from './outline';
 import { buildStandaloneHtml, fetchCssText } from './export';
+import { searchAll } from './globalSearch';
 import { checkForUpdate } from './update';
 import { saveSession, loadSession } from './session';
 import { splitMarkdown, SEGMENT_BYTES } from './segment';
@@ -62,6 +63,10 @@ const searchCount = document.getElementById('search-count') as HTMLSpanElement;
 const searchPrev = document.getElementById('search-prev') as HTMLButtonElement;
 const searchNext = document.getElementById('search-next') as HTMLButtonElement;
 const searchClose = document.getElementById('search-close') as HTMLButtonElement;
+const globalBar = document.getElementById('global-searchbar') as HTMLElement;
+const globalInput = document.getElementById('global-search-input') as HTMLInputElement;
+const globalCount = document.getElementById('global-search-count') as HTMLElement;
+const globalResults = document.getElementById('global-results') as HTMLElement;
 
 const REPO_URL = 'https://github.com/alexlivre/livemd';
 const REPO_RELEASES_URL = `${REPO_URL}/releases`;
@@ -93,6 +98,77 @@ const pendingByPath = new Map<string, { content: string; modifiedAt: number }>()
 const recentlySaved = new Map<string, number>();
 let paused = readStoredPause();
 let pendingClickConsumed = false;
+
+const globalDebounced = debounce(() => {
+  void (async () => {
+    const q = globalInput.value.trim();
+    if (!q) {
+      globalResults.hidden = true;
+      globalCount.textContent = '';
+      return;
+    }
+    const tabs = manager.getState().tabs.map((t) => ({ filePath: t.filePath, fileName: t.fileName, content: (t as unknown as { content: string }).content || '' }));
+    const recents = getRecentFiles()
+      .filter((p) => !tabs.some((t) => t.filePath === p))
+      .slice(0, 10);
+    const recentContents = new Map<string, string>();
+    for (const p of recents) {
+      try {
+        const f = await api.readFile(p);
+        recentContents.set(p, f.content.slice(0, 256 * 1024));
+      } catch {
+        /* ignore missing recent file */
+      }
+    }
+    const groups = searchAll(q, tabs, recentContents);
+    const total = groups.reduce((n, g) => n + g.matches.length, 0);
+    globalCount.textContent = total ? t('globalSearchResults', { n: total, m: groups.length }) : t('globalSearchEmpty');
+    if (total === 0) {
+      globalResults.innerHTML = `<div class="recent-empty">${escapeHtml(t('globalSearchEmpty'))}</div>`;
+      globalResults.hidden = false;
+      return;
+    }
+    globalResults.innerHTML = groups
+      .map(
+        (g) =>
+          `<div class="global-group"><div class="global-group-title">${escapeHtml(g.fileName)}<span class="global-group-path">${escapeHtml(g.filePath)}</span></div>${g.matches.map((m) => `<button class="global-match" data-path="${escapeAttr(g.filePath)}" data-line="${m.line}">${escapeHtml(m.preview.slice(0, 80))}</button>`).join('')}</div>`
+      )
+      .join('');
+    for (const btn of globalResults.querySelectorAll<HTMLButtonElement>('.global-match')) {
+      btn.addEventListener('click', async () => {
+        const fp = btn.dataset.path!;
+        await openPath(fp);
+        void api.findInPage(q);
+        globalBar.hidden = true;
+        globalResults.hidden = true;
+      });
+    }
+    globalResults.hidden = false;
+  })();
+}, 180);
+
+function openGlobalSearch(): void {
+  globalBar.hidden = false;
+  globalInput.focus();
+  globalInput.select();
+  void globalDebounced();
+}
+
+function closeGlobalSearch(): boolean {
+  if (globalBar.hidden) return false;
+  globalBar.hidden = true;
+  globalResults.hidden = true;
+  globalCount.textContent = '';
+  return true;
+}
+
+function bindGlobalSearch(): void {
+  globalInput.addEventListener('input', () => void globalDebounced());
+  document.getElementById('global-search-close')?.addEventListener('click', () => {
+    globalBar.hidden = true;
+    globalResults.hidden = true;
+  });
+}
 
 let markdownPromise: Promise<typeof import('./markdown')> | null = null;
 
@@ -825,6 +901,7 @@ function bindUi(): void {
   outlinePopover = bindOutline(btnOutline, outlineMenu, contentEl);
   bindAbout();
   bindSearch();
+  bindGlobalSearch();
 
   bindShortcuts({
     openFiles,
@@ -841,6 +918,8 @@ function bindUi(): void {
       closeAbout();
     },
     onSearch: openSearch,
+    openGlobalSearch,
+    closeGlobalSearch,
     zoomIn,
     zoomOut,
     zoomReset

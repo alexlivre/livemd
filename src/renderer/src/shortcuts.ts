@@ -6,6 +6,8 @@ export interface ShortcutDeps {
   toggleTheme: () => ThemeName;
   closeMenus: () => void;
   onSearch: () => void;
+  openGlobalSearch?: () => void;
+  closeGlobalSearch?: () => boolean;
   zoomIn: () => void;
   zoomOut: () => void;
   zoomReset: () => void;
@@ -15,7 +17,11 @@ export function bindShortcuts(deps: ShortcutDeps): void {
   window.addEventListener('keydown', (evt) => {
     const isCtrl = evt.ctrlKey || evt.metaKey;
     const key = evt.key.toLowerCase();
-    if (isCtrl && key === 'o') {
+    if (isCtrl && evt.shiftKey && key === 'f') {
+      evt.preventDefault();
+      deps.openGlobalSearch?.();
+      return;
+    } else if (isCtrl && key === 'o') {
       evt.preventDefault();
       void deps.openFiles();
     } else if (isCtrl && key === 'w') {
@@ -37,6 +43,7 @@ export function bindShortcuts(deps: ShortcutDeps): void {
       evt.preventDefault();
       deps.zoomReset();
     } else if (evt.key === 'Escape') {
+      if (deps.closeGlobalSearch?.()) return;
       deps.closeMenus();
     }
   });
