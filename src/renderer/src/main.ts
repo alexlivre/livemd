@@ -21,6 +21,7 @@ import { RemovalGrace } from './pending';
 import { debounce } from '@shared/util';
 import { enablePerf, perfMark } from '@shared/perf';
 import { addHighlight, loadHighlights, saveHighlights, renderHighlights } from './highlights';
+import { registerCommands, openPalette, closePalette, type PaletteCmd } from './palette';
 
 declare global {
   interface Window {
@@ -948,6 +949,105 @@ function renderExportMenu(): void {
   });
 }
 
+function buildPaletteCommands(): PaletteCmd[] {
+  const cmds: PaletteCmd[] = [
+    { id: 'openFile', label: t('openFile'), shortcut: 'Ctrl+O', action: () => void openFiles() },
+    {
+      id: 'toggleTheme',
+      label: (() => {
+        try {
+          return t('themeTooltip').split('(')[0].trim();
+        } catch {
+          return 'Toggle theme';
+        }
+      })(),
+      shortcut: 'Ctrl+Shift+T',
+      action: () => {
+        toggleTheme();
+      }
+    },
+    {
+      id: 'outline',
+      label: t('outlineTitle'),
+      action: () => {
+        if (!btnOutline.hidden) btnOutline.click();
+      }
+    },
+    {
+      id: 'exportPdf',
+      label: t('exportPdf'),
+      action: async () => {
+        const res = await api.exportPdf();
+        if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
+      }
+    },
+    {
+      id: 'exportHtml',
+      label: t('exportHtml'),
+      action: async () => {
+        const css = await fetchCssText();
+        const theme = document.documentElement.getAttribute('data-theme') || 'soft';
+        const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
+        const suggested = manager.getActive()?.filePath || 'document.md';
+        const res = await api.exportHtml(html, suggested);
+        if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
+      }
+    },
+    {
+      id: 'copyAsHtml',
+      label: t('copyAsHtml'),
+      action: async () => {
+        const css = await fetchCssText();
+        const theme = document.documentElement.getAttribute('data-theme') || 'soft';
+        const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
+        await api.copyText(html);
+        toast.show({ message: t('copied') });
+      }
+    },
+    { id: 'find', label: t('searchPlaceholder'), shortcut: 'Ctrl+F', action: () => openSearch() },
+    {
+      id: 'globalSearch',
+      label: t('globalSearchPlaceholder'),
+      shortcut: 'Ctrl+Shift+F',
+      action: () => openGlobalSearch()
+    },
+    {
+      id: 'pause',
+      label: paused ? t('resumeTooltip') : t('pauseTooltip'),
+      action: () => btnPause.click()
+    },
+    {
+      id: 'about',
+      label: t('aboutTooltip'),
+      action: () => {
+        lastFocused = document.activeElement as HTMLElement | null;
+        void openAbout();
+      }
+    },
+    { id: 'zoomIn', label: 'Zoom in', shortcut: 'Ctrl+=', action: () => zoomIn() },
+    { id: 'zoomOut', label: 'Zoom out', shortcut: 'Ctrl+-', action: () => zoomOut() },
+    { id: 'zoomReset', label: 'Reset zoom', shortcut: 'Ctrl+0', action: () => zoomReset() }
+  ];
+  const recents = getRecentFiles();
+  for (const p of recents) {
+    cmds.push({
+      id: `recent:${p}`,
+      label: `${basename(p)} — ${p}`,
+      action: () => void openPath(p)
+    });
+  }
+  return cmds;
+}
+
+function refreshPaletteCommands(): void {
+  registerCommands(buildPaletteCommands());
+}
+
+function handleOpenPalette(): void {
+  refreshPaletteCommands();
+  openPalette();
+}
+
 function bindUi(): void {
   btnNew.addEventListener('click', () => void openFiles());
   btnTheme.addEventListener('click', () => toggleTheme());
@@ -977,6 +1077,7 @@ function bindUi(): void {
       exportPopover.close();
       outlinePopover.close();
       closeAbout();
+      closePalette();
     },
     onSearch: openSearch,
     openGlobalSearch,
@@ -984,7 +1085,8 @@ function bindUi(): void {
     zoomIn,
     zoomOut,
     zoomReset,
-    onHighlight: () => void handleAddHighlight()
+    onHighlight: () => void handleAddHighlight(),
+    openPalette: () => handleOpenPalette()
   });
 
   api.onHighlightAdd((text) => void handleHighlightFromText(text));
@@ -1042,10 +1144,12 @@ async function bootstrap(): Promise<void> {
     applyStaticStrings();
     applyPauseUi();
     refreshUi();
+    refreshPaletteCommands();
   });
 
   api.onFileEvent(handleFileEvent);
   bindUi();
+  refreshPaletteCommands();
 
   contentEl.addEventListener(
     'scroll',

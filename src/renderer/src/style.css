@@ -1566,3 +1566,94 @@ mark[data-hl-id][data-hl-color='accent'] {
   background: var(--accent-soft);
   border-bottom-color: var(--accent);
 }
+
+/* ============================================================
+   Command palette (Ctrl+K)
+   ============================================================ */
+.palette-card {
+  text-align: left;
+  padding: 12px;
+  width: min(560px, calc(100vw - 48px));
+}
+
+.palette-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-content);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.palette-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.palette-input::placeholder {
+  color: var(--text-muted);
+}
+
+.palette-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.palette-list .recent-empty {
+  padding: 18px 10px;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.palette-item:hover {
+  background: var(--bg-tab-hover);
+}
+
+.palette-item.is-active {
+  background: var(--accent-soft);
+  color: var(--text-strong);
+}
+
+.palette-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette-shortcut {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}

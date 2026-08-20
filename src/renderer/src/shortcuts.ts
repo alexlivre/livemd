@@ -12,6 +12,7 @@ export interface ShortcutDeps {
   zoomOut: () => void;
   zoomReset: () => void;
   onHighlight?: () => void;
+  openPalette?: () => void;
 }
 
 export function bindShortcuts(deps: ShortcutDeps): void {
@@ -46,6 +47,9 @@ export function bindShortcuts(deps: ShortcutDeps): void {
     } else if (isCtrl && key === 'h') {
       evt.preventDefault();
       deps.onHighlight?.();
+    } else if (isCtrl && key === 'k') {
+      evt.preventDefault();
+      deps.openPalette?.();
     } else if (evt.key === 'Escape') {
       if (deps.closeGlobalSearch?.()) return;
       deps.closeMenus();
