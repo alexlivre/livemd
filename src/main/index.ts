@@ -434,17 +434,61 @@ function registerIpc(win: BrowserWindow): void {
     clipboard.writeText(typeof text === 'string' ? text : String(text));
   });
 
-  ipcMain.handle('file:export-pdf', async (): Promise<{ savedPath: string } | null> => {
+  ipcMain.handle('file:export-pdf', async (_evt, payload: unknown): Promise<{ savedPath: string } | null> => {
+    const { html, suggestedName } = payload as { html?: unknown; suggestedName?: unknown };
+    if (typeof html !== 'string' || typeof suggestedName !== 'string') return null;
     if (!win || win.isDestroyed()) return null;
-    const pdf = await win.webContents.printToPDF({ printBackground: true });
+    // Suggest PDF name derived from markdown file name
+    const pdfDefault = (() => {
+      const base = path.basename(suggestedName || 'document.md');
+      const withoutExt = base.replace(/\.(md|markdown|mdown|mkd|mdx)$/i, '');
+      return `${withoutExt || 'document'}.pdf`;
+    })();
     const { canceled, filePath } = await dialog.showSaveDialog(win, {
       title: t(currentLang, 'exportPdf'),
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
-      defaultPath: 'document.pdf'
+      defaultPath: pdfDefault
     });
     if (canceled || !filePath) return null;
-    await fs.writeFile(filePath, pdf);
-    return { savedPath: filePath };
+    // Convert HTML → PDF via hidden window so only the markdown content is printed,
+    // not the app UI (titlebar/tabs/sidebar). The HTML is standalone with inline CSS.
+    const tmpHtml = path.join(app.getPath('temp'), `livemd-export-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.html`);
+    let pdfWin: BrowserWindow | null = null;
+    try {
+      await fs.mkdir(path.dirname(tmpHtml), { recursive: true });
+      await fs.writeFile(tmpHtml, html, 'utf-8');
+      pdfWin = new BrowserWindow({
+        show: false,
+        width: 900,
+        height: 1200,
+        backgroundColor: '#ffffff',
+        webPreferences: {
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+          spellcheck: false
+        }
+      });
+      pdfWin.setMenuBarVisibility(false);
+      Menu.setApplicationMenu(null);
+      await pdfWin.loadFile(tmpHtml);
+      // Give images and fonts a moment to settle before printing
+      await new Promise<void>((res) => setTimeout(res, 250));
+      const pdf = await pdfWin.webContents.printToPDF({
+        printBackground: true,
+        margins: { top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 } as Electron.PrintToPDFOptions['margins'],
+        pageSize: 'A4'
+      } as Electron.PrintToPDFOptions);
+      await fs.writeFile(filePath, pdf);
+      return { savedPath: filePath };
+    } finally {
+      try {
+        if (pdfWin && !pdfWin.isDestroyed()) pdfWin.close();
+      } catch { /* ignore */ }
+      try {
+        await fs.unlink(tmpHtml);
+      } catch { /* ignore */ }
+    }
   });
 
   ipcMain.handle('file:export-html', async (_evt, payload: unknown): Promise<{ savedPath: string } | null> => {

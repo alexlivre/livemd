@@ -1211,7 +1211,13 @@ function renderExportMenu(): void {
     <button class="recent-menu-item" data-act="copy">${escapeHtml(t('copyAsHtml'))}</button>`;
   exportMenu.querySelector<HTMLButtonElement>('[data-act="pdf"]')?.addEventListener('click', async () => {
     exportPopover.close();
-    const res = await api.exportPdf();
+    // Build standalone HTML (with inline CSS + theme) and convert to PDF via hidden window
+    // so the PDF contains only the rendered markdown, not the app chrome.
+    const css = await fetchCssText();
+    const theme = document.documentElement.getAttribute('data-theme') || 'soft';
+    const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
+    const suggested = manager.getActive()?.filePath || 'document.md';
+    const res = await api.exportPdf(html, suggested);
     if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
   });
   exportMenu.querySelector<HTMLButtonElement>('[data-act="html"]')?.addEventListener('click', async () => {
@@ -1261,7 +1267,11 @@ function buildPaletteCommands(): PaletteCmd[] {
       id: 'exportPdf',
       label: t('exportPdf'),
       action: async () => {
-        const res = await api.exportPdf();
+        const css = await fetchCssText();
+        const theme = document.documentElement.getAttribute('data-theme') || 'soft';
+        const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
+        const suggested = manager.getActive()?.filePath || 'document.md';
+        const res = await api.exportPdf(html, suggested);
         if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
       }
     },

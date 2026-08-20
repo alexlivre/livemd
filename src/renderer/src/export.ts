@@ -1,6 +1,7 @@
 export function buildStandaloneHtml(contentHtml: string, theme: string, cssText: string): string {
-  const safeTheme = theme === 'dark' ? 'dark' : 'soft';
+  const safeTheme = theme === 'dark' ? 'dark' : theme === 'light' ? 'light' : 'soft';
   const css = cssText ? `<style>${cssText}</style>` : '';
+  // Standalone HTML for export/PDF: keep data-theme so tokens apply, wrap markdown-body with same padding as app
   return `<!doctype html><html data-theme="${safeTheme}"><head><meta charset="UTF-8">${css}</head><body><div class="markdown-body">${contentHtml}</div></body></html>`;
 }
 
