@@ -61,6 +61,9 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **About dialog** — info button in the titlebar shows version, author, license and the repository link (opens in the browser)
 - **Update indicator** — a dot on the About button appears when a newer release exists (silent check once a day); the About dialog links to the downloads page
 - **In-document search** — `Ctrl+F` opens a search bar (Chromium find-in-page) with match count and next/previous navigation
+- **Outline** — floating popover with h1-h3 and scroll-spy
+- **Export** — Save as PDF (printBackground) / HTML standalone / Copy as HTML
+- **Global search** — Ctrl+Shift+F across open tabs + recent files
 - **Session restore** — open tabs and their scroll positions are restored on the next launch
 - **Zoom** — `Ctrl+` / `Ctrl+-` / `Ctrl+0` adjust the zoom level
 - **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, renderer sandbox on, `contextIsolation` on, `file:read` gated behind a session allowlist; remote **images** render but never leak the reading context (`referrerpolicy="no-referrer"`) and remote **scripts** are impossible
