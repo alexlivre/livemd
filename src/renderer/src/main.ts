@@ -894,7 +894,70 @@ function bindContentLinks(): void {
     evt.preventDefault();
     if (/^(https?:|mailto:)/i.test(href)) {
       void api.openExternal(href);
+      return;
     }
+    // Local markdown link like ./docs/custom-themes.md or docs/file.md#anchor
+    // Resolve relative to the active file and open in a new tab.
+    const active = manager.getActive();
+    if (!active) return;
+    // Quick protocol check: ignore file:, data:, blob:, etc.
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return;
+    const hashIdx = href.indexOf('#');
+    const filePartRaw = hashIdx >= 0 ? href.slice(0, hashIdx) : href;
+    const hashPart = hashIdx >= 0 ? href.slice(hashIdx) : '';
+    // Clean query string for file detection
+    const qIdx = filePartRaw.indexOf('?');
+    const filePart = (qIdx >= 0 ? filePartRaw.slice(0, qIdx) : filePartRaw).trim();
+    if (!filePart) return;
+    // Only handle markdown files; other locals (images, etc.) are already rendered inline
+    if (!/\.(md|markdown|mdown|mkd|mdx)$/i.test(filePart)) return;
+    // Resolve relative to active file's directory (Windows-aware, no Node 'path' in renderer)
+    const baseDir = (() => {
+      const p = active.filePath.replace(/\\/g, '/');
+      const slash = p.lastIndexOf('/');
+      return slash >= 0 ? p.slice(0, slash) : '';
+    })();
+    let decodedFilePart = filePart;
+    try { decodedFilePart = decodeURIComponent(filePart); } catch { /* keep raw */ }
+    let resolved: string;
+    // Absolute Windows path like C:/... or C:\...
+    if (/^[a-zA-Z]:\//.test(decodedFilePart.replace(/\\/g, '/'))) {
+      resolved = decodedFilePart.replace(/\\/g, '/');
+    } else if (decodedFilePart.startsWith('/')) {
+      // Root-relative: treat as absolute from drive root is ambiguous; fallback to relative
+      resolved = decodedFilePart.replace(/^\//, baseDir ? `${baseDir}/` : '');
+    } else {
+      const baseParts = baseDir ? baseDir.replace(/\\/g, '/').split('/').filter(Boolean) : [];
+      // Keep drive letter as first part (e.g. "C:")
+      const relParts = decodedFilePart.replace(/\\/g, '/').split('/').filter((s) => s.length > 0 && s !== '.');
+      const stack = [...baseParts];
+      for (const part of relParts) {
+        if (part === '..') stack.pop();
+        else stack.push(part);
+      }
+      resolved = stack.join('/');
+      // Restore leading slash for absolute drive paths on Windows
+      if (/^[a-zA-Z]:/.test(baseDir) && !/^[a-zA-Z]:/.test(resolved)) {
+        // baseDir had drive but join lost it? Actually stack[0] is "C:" so join gives "C:/..."
+        // no extra handling needed
+      }
+    }
+    // Normalize to system separators for main (Node's path.resolve handles both, but keep forward slash)
+    void (async () => {
+      try {
+        await openPath(resolved);
+        if (hashPart) {
+          const id = decodeURIComponent(hashPart.slice(1));
+          // Wait for renderContent to complete and then scroll
+          requestAnimationFrame(() => {
+            const el = document.getElementById(id) ?? document.querySelector<HTMLElement>(`[data-slug="${id}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }
+      } catch {
+        /* openPath already shows status error */
+      }
+    })();
   });
 }
 
