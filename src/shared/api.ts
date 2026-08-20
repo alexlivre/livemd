@@ -28,6 +28,14 @@ export interface SaveAsResult {
   savedPath: string;
 }
 
+export interface CustomTheme {
+  id: string;
+  name: string;
+  css: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface MdApi {
   openDialog: () => Promise<OpenedFile[]>;
   readFile: (filePath: string) => Promise<OpenedFile>;
@@ -64,4 +72,8 @@ export interface MdApi {
   // aliases for spec/plan compatibility
   onCustomCssChange?: (handler: (css: string) => void) => () => void;
   onFolderEvent?: (handler: (folderPath: string) => void) => () => void;
+  listCustomThemes: () => Promise<CustomTheme[]>;
+  saveCustomTheme: (payload: { id?: string; name: string; css: string }) => Promise<CustomTheme>;
+  deleteCustomTheme: (id: string) => Promise<void>;
+  renameCustomTheme: (id: string, newName: string) => Promise<CustomTheme>;
 }

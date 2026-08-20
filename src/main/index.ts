@@ -40,6 +40,7 @@ let pendingOpenPath: string | null = null;
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const HIGHLIGHTS_FILE = path.join(app.getPath('userData'), 'highlights.json');
 const CUSTOM_CSS_FILE = path.join(app.getPath('userData'), 'custom.css');
+const CUSTOM_THEMES_FILE = path.join(app.getPath('userData'), 'custom-themes.json');
 
 let customCssKey: string | null = null;
 let customCssWatcher: FSWatcher | null = null;
@@ -74,6 +75,50 @@ async function writeHighlightsStore(store: Record<string, Highlight[]>): Promise
   const tmp = `${HIGHLIGHTS_FILE}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(store, null, 2), 'utf-8');
   await fs.rename(tmp, HIGHLIGHTS_FILE);
+}
+
+interface CustomTheme {
+  id: string;
+  name: string;
+  css: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+async function readCustomThemesStore(): Promise<CustomTheme[]> {
+  try {
+    const raw = await fs.readFile(CUSTOM_THEMES_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) return parsed as CustomTheme[];
+    if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { themes?: unknown }).themes)) {
+      return (parsed as { themes: CustomTheme[] }).themes;
+    }
+    return [];
+  } catch {
+    // Migrate legacy single custom.css if exists
+    try {
+      const legacy = await fs.readFile(CUSTOM_CSS_FILE, 'utf-8');
+      if (legacy && legacy.trim()) {
+        const migrated: CustomTheme = {
+          id: `ct-${Date.now()}`,
+          name: 'Custom',
+          css: legacy,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        await writeCustomThemesStore([migrated]);
+        return [migrated];
+      }
+    } catch { /* ignore */ }
+    return [];
+  }
+}
+
+async function writeCustomThemesStore(themes: CustomTheme[]): Promise<void> {
+  await fs.mkdir(path.dirname(CUSTOM_THEMES_FILE), { recursive: true });
+  const tmp = `${CUSTOM_THEMES_FILE}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(themes, null, 2), 'utf-8');
+  await fs.rename(tmp, CUSTOM_THEMES_FILE);
 }
 
 interface Settings {
@@ -622,6 +667,64 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('custom-css:load', handleCustomCssLoad);
   ipcMain.handle('customCss:save', handleCustomCssSave);
   ipcMain.handle('custom-css:save', handleCustomCssSave);
+
+  ipcMain.handle('customThemes:list', async (): Promise<CustomTheme[]> => {
+    const list = await readCustomThemesStore();
+    return list;
+  });
+
+  ipcMain.handle('customThemes:save', async (_evt, payload: unknown): Promise<CustomTheme> => {
+    const { id, name, css } = payload as { id?: unknown; name?: unknown; css?: unknown };
+    if (typeof name !== 'string' || typeof css !== 'string') throw new Error('invalid payload');
+    const cleanName = name.trim().slice(0, 50);
+    if (!cleanName) throw new Error('name required');
+    if (css.length > 50 * 1024) throw new Error('css too large');
+    const themes = await readCustomThemesStore();
+    if (themes.length >= 20 && !id) throw new Error('too many themes');
+    // duplicate name check (case-insensitive) for new themes
+    if (!id && themes.some((t) => t.name.toLowerCase() === cleanName.toLowerCase())) {
+      throw new Error('duplicate name');
+    }
+    let theme: CustomTheme;
+    if (typeof id === 'string' && id) {
+      const idx = themes.findIndex((t) => t.id === id);
+      if (idx === -1) throw new Error('not found');
+      themes[idx].name = cleanName;
+      themes[idx].css = css;
+      themes[idx].updatedAt = Date.now();
+      theme = themes[idx];
+    } else {
+      theme = { id: `ct-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: cleanName, css, createdAt: Date.now(), updatedAt: Date.now() };
+      themes.push(theme);
+    }
+    await writeCustomThemesStore(themes);
+    return theme;
+  });
+
+  ipcMain.handle('customThemes:delete', async (_evt, id: unknown): Promise<void> => {
+    if (typeof id !== 'string') throw new Error('invalid id');
+    const themes = await readCustomThemesStore();
+    const filtered = themes.filter((t) => t.id !== id);
+    if (filtered.length === themes.length) throw new Error('not found');
+    await writeCustomThemesStore(filtered);
+  });
+
+  ipcMain.handle('customThemes:rename', async (_evt, payload: unknown): Promise<CustomTheme> => {
+    const { id, newName } = payload as { id?: unknown; newName?: unknown };
+    if (typeof id !== 'string' || typeof newName !== 'string') throw new Error('invalid payload');
+    const cleanName = (newName as string).trim().slice(0, 50);
+    if (!cleanName) throw new Error('name required');
+    const themes = await readCustomThemesStore();
+    if (themes.some((t) => t.id !== id && t.name.toLowerCase() === cleanName.toLowerCase())) {
+      throw new Error('duplicate name');
+    }
+    const theme = themes.find((t) => t.id === id);
+    if (!theme) throw new Error('not found');
+    theme.name = cleanName;
+    theme.updatedAt = Date.now();
+    await writeCustomThemesStore(themes);
+    return theme;
+  });
 
   // start watchers and inject existing custom.css
   void watchCustomCss(win).catch(() => {});

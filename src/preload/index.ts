@@ -80,6 +80,12 @@ const api: MdApi = {
       ipcRenderer.off('folder:event', listener);
     };
   },
+  listCustomThemes: () => ipcRenderer.invoke('customThemes:list') as Promise<import('@shared/api').CustomTheme[]>,
+  saveCustomTheme: (payload: { id?: string; name: string; css: string }) =>
+    ipcRenderer.invoke('customThemes:save', payload) as Promise<import('@shared/api').CustomTheme>,
+  deleteCustomTheme: (id: string) => ipcRenderer.invoke('customThemes:delete', id) as Promise<void>,
+  renameCustomTheme: (id: string, newName: string) =>
+    ipcRenderer.invoke('customThemes:rename', { id, newName }) as Promise<import('@shared/api').CustomTheme>,
   // aliases for spec compatibility
   onCustomCssChange: (handler: (css: string) => void) => {
     const listener = (_: unknown, css: string) => handler(css);

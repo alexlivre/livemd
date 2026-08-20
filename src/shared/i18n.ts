@@ -112,7 +112,22 @@ const enMessages = {
   customCssSaved: 'Custom CSS saved',
   customCssCleared: 'Custom CSS cleared',
   customCssTooltip: 'Custom CSS',
-  customCssPath: 'File: {path}'
+  customCssPath: 'File: {path}',
+  themeMenuTitle: 'Themes',
+  themeOfficial: 'Official themes',
+  themeCustom: 'Custom themes',
+  themeCreate: 'Create new theme',
+  themeCreateTitle: 'Create theme',
+  themeEditTitle: 'Edit theme',
+  themeNameLabel: 'Theme name',
+  themeCssLabel: 'CSS code',
+  themeSave: 'Save',
+  themeRename: 'Rename',
+  themeDelete: 'Delete',
+  themeDeleteConfirm: 'Delete theme "{name}"?',
+  themeOfficialProtected: 'Official themes cannot be deleted or modified',
+  themeEmptyCustom: 'No custom themes',
+  themeApply: 'Apply'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -227,7 +242,22 @@ const ptMessages: Record<MsgKey, string> = {
   customCssSaved: 'CSS personalizado salvo',
   customCssCleared: 'CSS personalizado removido',
   customCssTooltip: 'CSS Personalizado',
-  customCssPath: 'Arquivo: {path}'
+  customCssPath: 'Arquivo: {path}',
+  themeMenuTitle: 'Temas',
+  themeOfficial: 'Temas oficiais',
+  themeCustom: 'Temas personalizados',
+  themeCreate: 'Criar novo tema',
+  themeCreateTitle: 'Criar tema',
+  themeEditTitle: 'Editar tema',
+  themeNameLabel: 'Nome do tema',
+  themeCssLabel: 'Código CSS',
+  themeSave: 'Salvar',
+  themeRename: 'Renomear',
+  themeDelete: 'Excluir',
+  themeDeleteConfirm: 'Excluir tema "{name}"?',
+  themeOfficialProtected: 'Temas oficiais não podem ser excluídos ou modificados',
+  themeEmptyCustom: 'Nenhum tema personalizado',
+  themeApply: 'Aplicar'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -340,7 +370,22 @@ const esMessages: Record<MsgKey, string> = {
   customCssSaved: 'CSS personalizado guardado',
   customCssCleared: 'CSS personalizado eliminado',
   customCssTooltip: 'CSS Personalizado',
-  customCssPath: 'Archivo: {path}'
+  customCssPath: 'Archivo: {path}',
+  themeMenuTitle: 'Temas',
+  themeOfficial: 'Temas oficiales',
+  themeCustom: 'Temas personalizados',
+  themeCreate: 'Crear nuevo tema',
+  themeCreateTitle: 'Crear tema',
+  themeEditTitle: 'Editar tema',
+  themeNameLabel: 'Nombre del tema',
+  themeCssLabel: 'Código CSS',
+  themeSave: 'Guardar',
+  themeRename: 'Renombrar',
+  themeDelete: 'Eliminar',
+  themeDeleteConfirm: '¿Eliminar tema "{name}"?',
+  themeOfficialProtected: 'Los temas oficiales no se pueden eliminar ni modificar',
+  themeEmptyCustom: 'Ningún tema personalizado',
+  themeApply: 'Aplicar'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {
