@@ -6,6 +6,7 @@ import { getEffectiveTheme, initTheme, setTheme, toggleTheme } from './theme';
 import { initCustomCss, loadCustomCss, saveCustomCss, applyCustomCss, getCustomCssPathHint } from './customCss';
 import { applyCustomThemeById, deleteCustomTheme, getActiveCustomId, initCustomThemes, listCustomThemes, renameCustomTheme, saveCustomTheme, setActiveCustomId } from './customThemes';
 import type { CustomTheme } from '@shared/api';
+import { prepareThemeEditor, resetThemeEditor } from './themeEditor';
 import { RenderCache } from './renderCache';
 import { getRecentFiles, recordRecentFile, removeRecentFile } from './recent';
 import { getEffectiveLang, initI18n, subscribe as subscribeLang, t } from './i18n';
@@ -51,12 +52,14 @@ const statusRight = document.getElementById('status-right') as HTMLSpanElement;
 const btnNew = document.getElementById('btn-new') as HTMLButtonElement;
 const btnTheme = document.getElementById('btn-theme') as HTMLButtonElement;
 const themeEditorModal = document.getElementById('theme-editor-modal') as HTMLDivElement | null;
+const themeEditorCard = document.getElementById('theme-editor-card') as HTMLElement | null;
 const themeEditorClose = document.getElementById('theme-editor-close') as HTMLButtonElement | null;
 const themeEditorCancel = document.getElementById('theme-editor-cancel') as HTMLButtonElement | null;
 const themeEditorSave = document.getElementById('theme-editor-save') as HTMLButtonElement | null;
 const themeEditorName = document.getElementById('theme-editor-name') as HTMLInputElement | null;
 const themeEditorCss = document.getElementById('theme-editor-css') as HTMLTextAreaElement | null;
 const themeEditorTitle = document.getElementById('theme-editor-title') as HTMLElement | null;
+const themeEditorError = document.getElementById('theme-editor-error') as HTMLElement | null;
 const customThemesMenu = document.getElementById('custom-themes-menu') as HTMLElement;
 const btnRecent = document.getElementById('btn-recent') as HTMLButtonElement;
 const recentMenu = document.getElementById('recent-menu') as HTMLDivElement;
@@ -1314,36 +1317,56 @@ async function renderCustomThemesMenu(): Promise<void> {
 }
 
 function openThemeEditor(theme: CustomTheme | null): void {
-  if (!themeEditorModal || !themeEditorName || !themeEditorCss || !themeEditorTitle) return;
+  if (!themeEditorModal || !themeEditorCard || !themeEditorName || !themeEditorCss || !themeEditorTitle) return;
+  lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : btnCustomCss;
+  closeAbout();
+  closeCustomCss();
+  closePalette();
   editingThemeId = theme ? theme.id : null;
   themeEditorTitle.textContent = theme ? t('themeEditTitle') : t('themeCreateTitle');
   themeEditorName.value = theme ? theme.name : '';
   themeEditorCss.value = theme ? theme.css : ':root {\n  --bg-app: #f8f3e8;\n  --text: #3c2f1e;\n}\n';
+  if (themeEditorError) {
+    themeEditorError.hidden = true;
+    themeEditorError.textContent = '';
+  }
   customThemesMenu.hidden = true;
   customThemesPopover.close();
-  themeEditorModal.hidden = false;
-  setTimeout(() => themeEditorName?.focus(), 50);
+  prepareThemeEditor({ modal: themeEditorModal, card: themeEditorCard, name: themeEditorName, css: themeEditorCss });
+  setTimeout(() => {
+    if (!themeEditorModal.hidden) {
+      themeEditorName.focus();
+      themeEditorName.select();
+    }
+  }, 50);
 }
 
 function closeThemeEditor(): void {
-  if (!themeEditorModal) return;
-  themeEditorModal.hidden = true;
+  if (!themeEditorModal || !themeEditorCard || !themeEditorName || !themeEditorCss) return;
+  resetThemeEditor({ modal: themeEditorModal, card: themeEditorCard, name: themeEditorName, css: themeEditorCss });
   editingThemeId = null;
-  if (lastFocused) lastFocused.focus();
+  if (lastFocused && lastFocused.isConnected && !themeEditorModal.contains(lastFocused)) lastFocused.focus();
 }
 
 async function handleThemeEditorSave(): Promise<void> {
-  if (!themeEditorName || !themeEditorCss) return;
+  if (!themeEditorName || !themeEditorCss || !themeEditorSave) return;
   const name = themeEditorName.value.trim().slice(0, 50);
   const css = themeEditorCss.value;
+  if (themeEditorError) {
+    themeEditorError.hidden = true;
+    themeEditorError.textContent = '';
+  }
   if (!name) {
-    toast.show({ message: t('saveError', { msg: 'name required' }), persist: true });
+    showThemeEditorError('name required');
+    themeEditorName.focus();
     return;
   }
   if (css.length > 50 * 1024) {
-    toast.show({ message: t('saveError', { msg: 'css too large' }), persist: true });
+    showThemeEditorError('css too large');
+    themeEditorCss.focus();
     return;
   }
+  themeEditorSave.disabled = true;
   try {
     const saved = await saveCustomTheme({ id: editingThemeId || undefined, name, css });
     await applyCustomThemeById(saved.id);
@@ -1351,7 +1374,19 @@ async function handleThemeEditorSave(): Promise<void> {
     await renderCustomThemesMenu();
     toast.show({ message: t('customCssSaved') });
   } catch (err) {
-    toast.show({ message: t('saveError', { msg: errorMessage(err as unknown) }), persist: true });
+    showThemeEditorError(errorMessage(err as unknown));
+    themeEditorName.focus();
+  } finally {
+    themeEditorSave.disabled = false;
+  }
+}
+
+function showThemeEditorError(message: string): void {
+  if (themeEditorError) {
+    themeEditorError.textContent = t('saveError', { msg: message });
+    themeEditorError.hidden = false;
+  } else {
+    toast.show({ message: t('saveError', { msg: message }), persist: true });
   }
 }
 
@@ -1363,6 +1398,7 @@ function bindThemeEditor(): void {
   themeEditorModal.addEventListener('click', (evt) => {
     if (evt.target === themeEditorModal) closeThemeEditor();
   });
+  themeEditorCard?.addEventListener('click', (evt) => evt.stopPropagation());
   themeEditorModal.addEventListener('keydown', (evt) => {
     if (evt.key === 'Escape') { closeThemeEditor(); return; }
     if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) { void handleThemeEditorSave(); }

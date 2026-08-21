@@ -196,6 +196,7 @@
           <input id="theme-editor-name" type="text" maxlength="50" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-content); color:var(--text); font-family:inherit; font-size:13px; outline:none;" placeholder="My theme" />
           <label for="theme-editor-css" style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin:12px 0 4px;" data-i18n="themeCssLabel">CSS code</label>
           <textarea id="theme-editor-css" rows="14" style="width:100%; min-height:220px; resize:vertical; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-content); color:var(--text); font-family:ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size:12.5px; outline:none;" placeholder=":root { --bg-app: #...; }"></textarea>
+          <div id="theme-editor-error" hidden style="margin-top:8px; color:var(--danger); font-size:12px; line-height:1.4;"></div>
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
             <button id="theme-editor-cancel" class="btn btn-ghost" type="button" data-i18n="aboutClose">Cancel</button>
             <button id="theme-editor-save" class="btn btn-primary" type="button" data-i18n="themeSave">Save</button>

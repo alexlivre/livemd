@@ -1538,6 +1538,20 @@ body {
   text-align: center;
 }
 
+#theme-editor-modal,
+#theme-editor-modal #theme-editor-card,
+#theme-editor-modal input,
+#theme-editor-modal textarea,
+#theme-editor-modal button {
+  pointer-events: auto;
+}
+
+#theme-editor-modal input,
+#theme-editor-modal textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .about-close {
   position: absolute;
   top: 10px;
