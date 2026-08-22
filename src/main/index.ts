@@ -205,6 +205,13 @@ async function watchCustomCss(win: BrowserWindow): Promise<void> {
 }
 
 async function watchFolder(folderPath: string, win: BrowserWindow): Promise<void> {
+  // Sidebar shows a single folder at a time: release every other folder
+  // watcher instead of accumulating directory watchers until quit.
+  for (const [other, watcher] of [...folderWatchers]) {
+    if (other === folderPath) continue;
+    void watcher.close();
+    folderWatchers.delete(other);
+  }
   if (folderWatchers.has(folderPath)) return;
   const chokidar = await getChokidar();
   if (folderWatchers.has(folderPath)) return;
