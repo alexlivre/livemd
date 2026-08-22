@@ -12,5 +12,5 @@ export function escapeHtml(text: string): string {
 }
 
 export function escapeAttr(text: string): string {
-  return escapeHtml(text).replace(/"/g, '&quot;');
+  return escapeHtml(text).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
