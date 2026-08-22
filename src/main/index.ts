@@ -886,16 +886,6 @@ if (!gotTheLock) {
     }
   });
 
-  // macOS file open events
-  app.on('open-file', (event, filePath) => {
-    event.preventDefault();
-    if (app.isReady() && mainWindow) {
-      deliverOpenPath(filePath);
-    } else {
-      pendingOpenPath = filePath;
-    }
-  });
-
   // Capture initial argv at startup (Windows "Open with" passes file here)
   const initialFromArgs = extractMarkdownFromArgs(process.argv);
   if (initialFromArgs) {
@@ -912,11 +902,7 @@ if (!gotTheLock) {
 
   app.on('window-all-closed', () => {
     unwatchAll();
-    if (process.platform !== 'darwin') app.quit();
-  });
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) void createWindow();
+    app.quit();
   });
 
   app.on('before-quit', () => {
