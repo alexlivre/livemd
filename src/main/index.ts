@@ -42,7 +42,6 @@ const HIGHLIGHTS_FILE = path.join(app.getPath('userData'), 'highlights.json');
 const CUSTOM_CSS_FILE = path.join(app.getPath('userData'), 'custom.css');
 const CUSTOM_THEMES_FILE = path.join(app.getPath('userData'), 'custom-themes.json');
 
-let customCssKey: string | null = null;
 let customCssWatcher: FSWatcher | null = null;
 const folderWatchers = new Map<string, FSWatcher>();
 
@@ -151,28 +150,6 @@ async function readCustomCssFile(): Promise<string> {
   }
 }
 
-function enhanceCssSpecificity(css: string): string {
-  return css.replace(/:root(?=\s*\{)/g, ':root, :root[data-theme="dark"], :root[data-theme="soft"], :root[data-theme="light"]');
-}
-
-async function applyCustomCss(win: BrowserWindow, css: string): Promise<void> {
-  if (win.isDestroyed()) return;
-  try {
-    if (customCssKey) {
-      await win.webContents.removeInsertedCSS(customCssKey);
-      customCssKey = null;
-    }
-  } catch {
-    customCssKey = null;
-  }
-  if (!css) return;
-  try {
-    customCssKey = await win.webContents.insertCSS(enhanceCssSpecificity(css));
-  } catch {
-    /* invalid CSS — ignore */
-  }
-}
-
 async function watchCustomCss(win: BrowserWindow): Promise<void> {
   if (customCssWatcher) return;
   const chokidar = await getChokidar();
@@ -187,20 +164,12 @@ async function watchCustomCss(win: BrowserWindow): Promise<void> {
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 80, pollInterval: 30 }
   });
-  watcher.on('change', async () => {
-    const css = await readCustomCssFile();
-    await applyCustomCss(win, css);
+  const push = (css: string): void => {
     if (!win.isDestroyed()) win.webContents.send('custom-css:changed', css);
-  });
-  watcher.on('add', async () => {
-    const css = await readCustomCssFile();
-    await applyCustomCss(win, css);
-    if (!win.isDestroyed()) win.webContents.send('custom-css:changed', css);
-  });
-  watcher.on('unlink', async () => {
-    await applyCustomCss(win, '');
-    if (!win.isDestroyed()) win.webContents.send('custom-css:changed', '');
-  });
+  };
+  watcher.on('change', async () => push(await readCustomCssFile()));
+  watcher.on('add', async () => push(await readCustomCssFile()));
+  watcher.on('unlink', () => push(''));
   customCssWatcher = watcher;
 }
 
@@ -364,7 +333,6 @@ function unwatchAll(): void {
     void customCssWatcher.close();
     customCssWatcher = null;
   }
-  customCssKey = null;
 }
 
 function focusMainWindow(): void {
@@ -674,7 +642,6 @@ function registerIpc(win: BrowserWindow): void {
     if (typeof css !== 'string') throw new Error('invalid css');
     await fs.mkdir(path.dirname(CUSTOM_CSS_FILE), { recursive: true });
     await fs.writeFile(CUSTOM_CSS_FILE, css, 'utf-8');
-    await applyCustomCss(win, css);
     if (!win.isDestroyed()) win.webContents.send('custom-css:changed', css);
   };
 
@@ -741,11 +708,8 @@ function registerIpc(win: BrowserWindow): void {
     return theme;
   });
 
-  // start watchers and inject existing custom.css
+  // start watchers; renderer injects existing custom.css via style tag
   void watchCustomCss(win).catch(() => {});
-  void readCustomCssFile()
-    .then((css) => applyCustomCss(win, css))
-    .catch(() => {});
 }
 
 async function createWindow(): Promise<void> {
