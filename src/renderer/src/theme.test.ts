@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getEffectiveTheme, getStoredTheme, toggleTheme, setTheme } from './theme';
+import { getEffectiveTheme, getStoredTheme, toggleTheme, setTheme, initTheme } from './theme';
 
 describe('theme', () => {
   beforeEach(() => localStorage.clear());
@@ -25,5 +25,17 @@ describe('theme', () => {
     setTheme('dark');
     expect(getEffectiveTheme()).toBe('dark');
     expect(localStorage.getItem('md-reader.theme')).toBe('dark');
+  });
+});
+
+describe('light theme migration', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('migrates a persisted light theme to soft on init', () => {
+    localStorage.setItem('md-reader.theme', 'light');
+    const applied = initTheme();
+    expect(applied).toBe('soft');
+    expect(localStorage.getItem('md-reader.theme')).toBe('soft');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('soft');
   });
 });

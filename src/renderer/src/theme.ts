@@ -58,6 +58,12 @@ export function watchSystemTheme(_onChange: (theme: ThemeName) => void): () => v
 }
 
 export function initTheme(): ThemeName {
+  // One-time migration: legacy 'light' predates the two-theme policy and is
+  // unreachable from THEME_CYCLE; land those users on the default.
+  if (readStoredTheme() === 'light') {
+    setTheme(DEFAULT_THEME);
+    return DEFAULT_THEME;
+  }
   const theme = getEffectiveTheme();
   applyTheme(theme);
   return theme;
