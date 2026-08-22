@@ -12,8 +12,8 @@ const api: MdApi = {
   closeTab: (filePath: string) => ipcRenderer.invoke('tab:close', filePath) as Promise<void>,
   revealInFolder: (filePath: string) =>
     ipcRenderer.invoke('shell:reveal', filePath) as Promise<void>,
-  consumePendingPath: () =>
-    ipcRenderer.invoke('app:consume-pending') as Promise<string | null>,
+  consumePendingPaths: () =>
+    ipcRenderer.invoke('app:consume-pending') as Promise<string[]>,
   getOsLocale: () => ipcRenderer.invoke('app:get-locale') as Promise<string>,
   setLanguage: (lang: AppLanguage) =>
     ipcRenderer.invoke('app:set-language', lang) as Promise<void>,

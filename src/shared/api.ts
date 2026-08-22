@@ -43,7 +43,7 @@ export interface MdApi {
   saveAs: (filePath: string, content: string) => Promise<SaveAsResult | null>;
   closeTab: (filePath: string) => Promise<void>;
   revealInFolder: (filePath: string) => Promise<void>;
-  consumePendingPath: () => Promise<string | null>;
+  consumePendingPaths: () => Promise<string[]>;
   getOsLocale: () => Promise<string>;
   setLanguage: (lang: AppLanguage) => Promise<void>;
   getAppVersion: () => Promise<string>;

@@ -822,9 +822,9 @@ async function openPath(filePath: string): Promise<void> {
 }
 
 async function consumePending(): Promise<void> {
-  const filePath = await api.consumePendingPath();
-  if (filePath) {
-    pendingClickConsumed = true;
+  const paths = await api.consumePendingPaths();
+  pendingClickConsumed = paths.length > 0;
+  for (const filePath of paths) {
     await openPath(filePath);
   }
 }

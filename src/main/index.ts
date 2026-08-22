@@ -35,7 +35,7 @@ function getChokidar(): Promise<typeof import('chokidar')> {
   return chokidarPromise;
 }
 let mainWindow: BrowserWindow | null = null;
-let pendingOpenPath: string | null = null;
+let pendingOpenPaths: string[] = [];
 
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const HIGHLIGHTS_FILE = path.join(app.getPath('userData'), 'highlights.json');
@@ -256,23 +256,23 @@ function filePathFromFileUrl(url: string): string | null {
   }
 }
 
-function extractMarkdownFromArgs(argv: string[]): string | null {
-  // Skip the executable; look for the first arg ending with a Markdown extension.
+function extractMarkdownPaths(argv: string[]): string[] {
+  // Skip the executable; collect every arg ending with a Markdown extension.
   // Exclude flags (starting with "-") and the "." used in dev.
+  const found: string[] = [];
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i];
     if (!arg || arg.startsWith('-')) continue;
     if (arg === '.') continue;
     if (isMarkdown(arg)) {
       try {
-        const resolved = path.resolve(arg);
-        return resolved;
+        found.push(path.resolve(arg));
       } catch {
-        return arg;
+        found.push(arg);
       }
     }
   }
-  return null;
+  return found;
 }
 
 async function readMarkdownFile(filePath: string) {
@@ -371,7 +371,7 @@ function focusMainWindow(): void {
 function deliverOpenPath(filePath: string): void {
   trustPath(filePath);
   if (!mainWindow || mainWindow.webContents.isLoading()) {
-    pendingOpenPath = filePath;
+    if (!pendingOpenPaths.includes(filePath)) pendingOpenPaths.push(filePath);
     return;
   }
   mainWindow.webContents.send('app:open-path', filePath);
@@ -557,11 +557,7 @@ function registerIpc(win: BrowserWindow): void {
     return { savedPath: filePath };
   });
 
-  ipcMain.handle('app:consume-pending', (): string | null => {
-    const p = pendingOpenPath;
-    pendingOpenPath = null;
-    return p;
-  });
+  ipcMain.handle('app:consume-pending', (): string[] => pendingOpenPaths.splice(0));
 
   ipcMain.handle('app:get-locale', () => app.getLocale());
 
@@ -865,9 +861,10 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
-    if (pendingOpenPath && mainWindow) {
-      mainWindow.webContents.send('app:open-path', pendingOpenPath);
-      pendingOpenPath = null;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const queued = pendingOpenPaths.splice(0);
+    for (const filePath of queued) {
+      mainWindow.webContents.send('app:open-path', filePath);
     }
   });
 }
@@ -880,16 +877,15 @@ if (!gotTheLock) {
 } else {
   app.on('second-instance', (_evt, argv) => {
     focusMainWindow();
-    const filePath = extractMarkdownFromArgs(argv);
-    if (filePath) {
+    for (const filePath of extractMarkdownPaths(argv)) {
       deliverOpenPath(filePath);
     }
   });
 
-  // Capture initial argv at startup (Windows "Open with" passes file here)
-  const initialFromArgs = extractMarkdownFromArgs(process.argv);
-  if (initialFromArgs) {
-    pendingOpenPath = initialFromArgs;
+  // Capture initial argv at startup (Windows "Open with" may pass several files)
+  const initialFromArgs = extractMarkdownPaths(process.argv);
+  for (const filePath of initialFromArgs) {
+    pendingOpenPaths.push(filePath);
   }
 
   app.whenReady().then(() => {
