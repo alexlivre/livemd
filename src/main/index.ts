@@ -7,7 +7,7 @@ import type { FSWatcher } from 'chokidar';
 import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
 import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES } from '@shared/constants';
 import { suggestBackupPath } from '@shared/backupName';
-import { parseVersion, versionsDiffer } from '@shared/version';
+import { parseVersion, versionsNewer } from '@shared/version';
 import { enablePerf, perfMark } from '@shared/perf';
 
 const PERF_ENABLED = process.env.LIVEMD_PERF === '1';
@@ -596,7 +596,7 @@ function registerIpc(win: BrowserWindow): void {
       const data = (await res.json()) as { tag_name?: string };
       const latest = data.tag_name ?? '';
       if (!latest) return null;
-      return { latestVersion: latest, hasUpdate: versionsDiffer(latest, app.getVersion()) };
+      return { latestVersion: latest, hasUpdate: versionsNewer(latest, app.getVersion()) };
     } catch {
       return null;
     }
