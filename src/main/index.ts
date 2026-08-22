@@ -215,7 +215,6 @@ async function watchFolder(folderPath: string, win: BrowserWindow): Promise<void
   });
   const notify = () => {
     if (win.isDestroyed()) return;
-    win.webContents.send('folder:changed', folderPath);
     win.webContents.send('folder:event', folderPath);
   };
   watcher.on('add', notify);
