@@ -149,7 +149,7 @@ function restoreZoomForPath(filePath: string): void {
 const manager = new TabManager();
 const renderCache = new RenderCache();
 const scrollByPath = new Map<string, number>();
-let pendingScrollTop: number | null = null;
+const pendingScrollByPath = new Map<string, number>();
 let lastFocused: HTMLElement | null = null;
 let recentPopover: Popover;
 let langPopover: Popover;
@@ -551,9 +551,10 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
   }
   renderCache.flush();
 
-  if (pendingScrollTop !== null) {
-    contentEl.scrollTop = pendingScrollTop;
-    pendingScrollTop = null;
+  const savedScroll = pendingScrollByPath.get(active.filePath);
+  if (savedScroll !== undefined) {
+    contentEl.scrollTop = savedScroll;
+    pendingScrollByPath.delete(active.filePath);
   }
 
   setStatus(t('reading', { file: active.fileName }), 'ok');
@@ -876,9 +877,8 @@ async function restoreSession(): Promise<void> {
   const restoredActive = session.activePath ?? files[0]?.filePath ?? null;
   if (restoredActive) restoreZoomForPath(restoredActive);
 
-  const savedScroll = session.tabs.find((t) => t.filePath === session.activePath)?.scrollTop ?? 0;
-  if (savedScroll > 0) {
-    pendingScrollTop = savedScroll;
+  for (const tab of session.tabs) {
+    if (tab.scrollTop > 0) pendingScrollByPath.set(tab.filePath, tab.scrollTop);
   }
 }
 
