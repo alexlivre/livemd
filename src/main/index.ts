@@ -7,7 +7,7 @@ import type { FSWatcher } from 'chokidar';
 import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
 import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES } from '@shared/constants';
 import { suggestBackupPath } from '@shared/backupName';
-import { parseVersion, versionsNewer } from '@shared/version';
+import { versionsNewer } from '@shared/version';
 import { enablePerf, perfMark } from '@shared/perf';
 
 const PERF_ENABLED = process.env.LIVEMD_PERF === '1';
