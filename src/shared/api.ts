@@ -39,6 +39,7 @@ export interface CustomTheme {
 export interface MdApi {
   openDialog: () => Promise<OpenedFile[]>;
   readFile: (filePath: string) => Promise<OpenedFile>;
+  watchFile: (filePath: string) => Promise<void>;
   allowRead: (filePath: string) => Promise<void>;
   saveAs: (filePath: string, content: string) => Promise<SaveAsResult | null>;
   closeTab: (filePath: string) => Promise<void>;

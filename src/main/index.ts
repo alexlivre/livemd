@@ -408,7 +408,6 @@ function registerIpc(win: BrowserWindow): void {
     const files: { filePath: string; fileName: string; content: string; modifiedAt: number }[] = [];
     for (const filePath of candidates) {
       trustPath(filePath);
-      startWatch(filePath, win);
     }
     for (const resultItem of settled) {
       if (resultItem.status === 'fulfilled') {
@@ -430,7 +429,6 @@ function registerIpc(win: BrowserWindow): void {
     if (!readablePaths.has(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
     if (!isMarkdown(resolved)) throw new Error(t(currentLang, 'markdownOnly'));
     const { content, modifiedAt } = await readMarkdownFile(resolved);
-    startWatch(resolved, win);
     return {
       filePath: resolved,
       fileName: path.basename(resolved),
@@ -443,6 +441,17 @@ function registerIpc(win: BrowserWindow): void {
     if (typeof filePath === 'string' && isMarkdown(filePath)) {
       trustPath(filePath);
     }
+  });
+
+  // The renderer registers one watch per newly created tab. Guarded by the
+  // same trust set as file:read so a compromised renderer cannot spy on
+  // arbitrary paths via change events.
+  ipcMain.handle('file:watch', (_evt, filePath: unknown) => {
+    if (typeof filePath !== 'string') return;
+    const resolved = path.resolve(filePath);
+    if (!readablePaths.has(resolved)) return;
+    if (!isMarkdown(resolved)) return;
+    startWatch(resolved, win);
   });
 
   ipcMain.handle('file:save-as', async (_evt, payload: unknown) => {
@@ -862,6 +871,9 @@ async function createWindow(): Promise<void> {
 
   mainWindow.webContents.on('did-finish-load', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
+    // Renderer reload rebuilds its TabManager: restart per-path counting so
+    // counts match the fresh session's tabs.
+    watchCounts.clear();
     const queued = pendingOpenPaths.splice(0);
     for (const filePath of queued) {
       mainWindow.webContents.send('app:open-path', filePath);

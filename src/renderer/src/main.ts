@@ -586,7 +586,9 @@ async function openFiles(): Promise<void> {
       return;
     }
     for (const file of files) {
+      const isNewTab = !manager.hasPath(file.filePath);
       manager.add(file);
+      if (isNewTab) await api.watchFile(file.filePath);
       recordRecentFile(file.filePath);
     }
     setStatus(t('openedCount', { n: files.length }), 'ok');
@@ -735,6 +737,7 @@ async function openRecreated(filePath: string): Promise<void> {
     await api.allowRead(filePath);
     const file = await api.readFile(filePath);
     manager.addCopy(file);
+    await api.watchFile(file.filePath);
     recordRecentFile(file.filePath);
   } catch (err) {
     setStatus(t('openError', { msg: errorMessage(err) }), 'err');
@@ -804,13 +807,16 @@ async function openPath(filePath: string): Promise<void> {
   try {
     setStatus(t('openingFile', { file: basename(filePath) }), '');
     await api.allowRead(filePath);
+    const isNewTab = !manager.hasPath(filePath);
     const file = await api.readFile(filePath);
     if (manager.hasOrphaned(file.filePath)) {
       // The disk version opens next to the frozen tab instead of silently
       // replacing the frozen content.
       manager.addCopy(file);
+      await api.watchFile(file.filePath);
     } else {
       manager.add(file);
+      if (isNewTab) await api.watchFile(file.filePath);
     }
     recordRecentFile(file.filePath);
     restoreZoomForPath(file.filePath);
@@ -862,6 +868,10 @@ async function restoreSession(): Promise<void> {
   if (files.length === 0) return;
 
   manager.addMany(files, pendingClickConsumed ? null : (session.activePath ?? undefined));
+
+  for (const file of files) {
+    void api.watchFile(file.filePath).catch(() => {});
+  }
 
   const restoredActive = session.activePath ?? files[0]?.filePath ?? null;
   if (restoredActive) restoreZoomForPath(restoredActive);

@@ -6,6 +6,8 @@ import type { Highlight, MdApi, OpenedFile, UpdateCheck, SearchResult, SaveAsRes
 const api: MdApi = {
   openDialog: () => ipcRenderer.invoke('file:open-dialog') as Promise<OpenedFile[]>,
   readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath) as Promise<OpenedFile>,
+  watchFile: (filePath: string) =>
+    ipcRenderer.invoke('file:watch', filePath) as Promise<void>,
   allowRead: (filePath: string) => ipcRenderer.invoke('file:allow-read', filePath) as Promise<void>,
   saveAs: (filePath: string, content: string) =>
     ipcRenderer.invoke('file:save-as', { filePath, content }) as Promise<SaveAsResult | null>,
