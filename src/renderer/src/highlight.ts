@@ -59,34 +59,45 @@ export function highlightBlock(code: HTMLElement): void {
 const IDLE_SLICE_MS = 8;
 const IDLE_FALLBACK_MS = 16;
 
-export function highlightCodeBlocksInIdle(container: HTMLElement): void {
+export function highlightCodeBlocksInIdle(container: HTMLElement): Promise<void> {
   const blocks = container.querySelectorAll<HTMLElement>('[data-hljs]');
-  if (blocks.length === 0) return;
+  if (blocks.length === 0) return Promise.resolve();
 
-  let index = 0;
-  const runSlice = (deadline?: { timeRemaining: () => number }): void => {
-    const sliceEnd =
-      performance.now() + Math.max(deadline?.timeRemaining() ?? IDLE_SLICE_MS, IDLE_SLICE_MS);
-    let processed = 0;
-    while (index < blocks.length && (performance.now() < sliceEnd || processed === 0)) {
-      const block = blocks[index] as HTMLElement;
-      index++;
-      processed++;
-      if (!block.isConnected) continue;
-      highlightBlock(block);
-    }
-    if (index < blocks.length) {
-      if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(runSlice, { timeout: 500 });
-      } else {
-        setTimeout(() => runSlice(), IDLE_FALLBACK_MS);
+  return new Promise((resolve) => {
+    let index = 0;
+    let done = false;
+    const finish = (): void => {
+      if (!done) {
+        done = true;
+        resolve();
       }
-    }
-  };
+    };
+    const runSlice = (deadline?: { timeRemaining: () => number }): void => {
+      const sliceEnd =
+        performance.now() + Math.max(deadline?.timeRemaining() ?? IDLE_SLICE_MS, IDLE_SLICE_MS);
+      let processed = 0;
+      while (index < blocks.length && (performance.now() < sliceEnd || processed === 0)) {
+        const block = blocks[index] as HTMLElement;
+        index++;
+        processed++;
+        if (!block.isConnected) continue;
+        highlightBlock(block);
+      }
+      if (index < blocks.length) {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(runSlice, { timeout: 500 });
+        } else {
+          setTimeout(() => runSlice(), IDLE_FALLBACK_MS);
+        }
+      } else {
+        finish();
+      }
+    };
 
-  if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(runSlice, { timeout: 200 });
-  } else {
-    setTimeout(() => runSlice(), IDLE_FALLBACK_MS);
-  }
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(runSlice, { timeout: 200 });
+    } else {
+      setTimeout(() => runSlice(), IDLE_FALLBACK_MS);
+    }
+  });
 }

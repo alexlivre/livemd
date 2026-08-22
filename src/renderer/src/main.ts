@@ -487,7 +487,7 @@ function idleSlice(): Promise<void> {
 async function scheduleHighlight(container: HTMLElement): Promise<void> {
   if (!container.querySelector('[data-hljs]')) return;
   const { highlightCodeBlocksInIdle } = await import('./highlight');
-  highlightCodeBlocksInIdle(container);
+  await highlightCodeBlocksInIdle(container);
 }
 
 function paintArticle(html: string): HTMLElement {
@@ -566,9 +566,22 @@ async function renderContent(state: { tabs: TabData[]; activeId: string | null }
   contentEl.classList.add('flash');
 
   refreshOutline(state.activeId ?? '', contentEl, btnOutline, outlineMenu);
-  void scheduleHighlight(contentEl);
-  void renderMermaid(contentEl);
-  void renderMath(contentEl);
+  void (async () => {
+    try {
+      await scheduleHighlight(contentEl);
+      await renderMermaid(contentEl);
+      await renderMath(contentEl);
+      // Cache the POST-pass markup so revisiting this tab replays finished
+      // output instead of flashing raw code through highlight/Mermaid again.
+      const article = contentEl.firstElementChild as HTMLElement | null;
+      if (article?.isConnected) {
+        renderCache.set(active.filePath, active.content, article.innerHTML);
+        renderCache.flush();
+      }
+    } catch {
+      /* cosmetic passes must never break rendering */
+    }
+  })();
   void applyHighlightsForFile(active.filePath);
   doRefreshSidebar(active.filePath);
 }
