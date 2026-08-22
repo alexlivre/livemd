@@ -1232,31 +1232,37 @@ function renderExportMenu(): void {
     <button class="recent-menu-item" data-act="pdf">${escapeHtml(t('exportPdf'))}</button>
     <button class="recent-menu-item" data-act="html">${escapeHtml(t('exportHtml'))}</button>
     <button class="recent-menu-item" data-act="copy">${escapeHtml(t('copyAsHtml'))}</button>`;
-  exportMenu.querySelector<HTMLButtonElement>('[data-act="pdf"]')?.addEventListener('click', async () => {
-    exportPopover.close();
-    // Build standalone HTML (with inline CSS + theme) and convert to PDF via hidden window
-    // so the PDF contains only the rendered markdown, not the app chrome.
+  const buildStandalone = async (): Promise<string | null> => {
+    const active = manager.getActive();
+    if (!active) return null;
     const css = await fetchCssText();
     const theme = document.documentElement.getAttribute('data-theme') || 'soft';
-    const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
-    const suggested = manager.getActive()?.filePath || 'document.md';
-    const res = await api.exportPdf(html, suggested);
+    // Render from the tab's SOURCE so exports exclude reader artifacts
+    // (highlights, Mermaid SVG swaps) and can never capture a partially
+    // rendered incremental document.
+    const { renderMarkdown } = await getMarkdown();
+    return buildStandaloneHtml(await renderMarkdown(active.content), theme, css);
+  };
+  exportMenu.querySelector<HTMLButtonElement>('[data-act="pdf"]')?.addEventListener('click', async () => {
+    exportPopover.close();
+    const active = manager.getActive();
+    const html = await buildStandalone();
+    if (!html || !active) return;
+    const res = await api.exportPdf(html, active.filePath || 'document.md');
     if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
   });
   exportMenu.querySelector<HTMLButtonElement>('[data-act="html"]')?.addEventListener('click', async () => {
     exportPopover.close();
-    const css = await fetchCssText();
-    const theme = document.documentElement.getAttribute('data-theme') || 'soft';
-    const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
-    const suggested = manager.getActive()?.filePath || 'document.md';
-    const res = await api.exportHtml(html, suggested);
+    const active = manager.getActive();
+    const html = await buildStandalone();
+    if (!html || !active) return;
+    const res = await api.exportHtml(html, active.filePath || 'document.md');
     if (res) toast.show({ message: t('toastSaved', { file: basename(res.savedPath) }) });
   });
   exportMenu.querySelector<HTMLButtonElement>('[data-act="copy"]')?.addEventListener('click', async () => {
     exportPopover.close();
-    const css = await fetchCssText();
-    const theme = document.documentElement.getAttribute('data-theme') || 'soft';
-    const html = buildStandaloneHtml(contentEl.innerHTML, theme, css);
+    const html = await buildStandalone();
+    if (!html) return;
     await api.copyText(html);
     toast.show({ message: t('copied') });
   });
