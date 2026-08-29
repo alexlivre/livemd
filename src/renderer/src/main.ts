@@ -1249,7 +1249,18 @@ async function buildStandalone(): Promise<string | null> {
   // (highlights, Mermaid SVG swaps) and can never capture a partially
   // rendered incremental document.
   const { renderMarkdown } = await getMarkdown();
-  return buildStandaloneHtml(await renderMarkdown(active.content), theme, css);
+  const rawHtml = await renderMarkdown(active.content);
+  const temp = document.createElement('div');
+  temp.innerHTML = rawHtml;
+  try {
+    const { highlightBlock } = await import('./highlight');
+    for (const block of Array.from(temp.querySelectorAll<HTMLElement>('[data-hljs]'))) {
+      highlightBlock(block);
+    }
+  } catch {
+    /* ignore highlight error */
+  }
+  return buildStandaloneHtml(temp.innerHTML, theme, css);
 }
 
 function renderExportMenu(): void {
