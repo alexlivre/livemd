@@ -11,6 +11,11 @@ import rust from 'highlight.js/lib/languages/rust';
 import go from 'highlight.js/lib/languages/go';
 import yaml from 'highlight.js/lib/languages/yaml';
 import sql from 'highlight.js/lib/languages/sql';
+import powershell from 'highlight.js/lib/languages/powershell';
+import dos from 'highlight.js/lib/languages/dos';
+import csharp from 'highlight.js/lib/languages/csharp';
+import cpp from 'highlight.js/lib/languages/cpp';
+import ini from 'highlight.js/lib/languages/ini';
 import { AUTO_DETECT_CHAR_LIMIT } from './markdown';
 
 hljs.registerLanguage('javascript', javascript);
@@ -36,6 +41,18 @@ hljs.registerLanguage('go', go);
 hljs.registerLanguage('yaml', yaml);
 hljs.registerLanguage('yml', yaml);
 hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('powershell', powershell);
+hljs.registerLanguage('ps', powershell);
+hljs.registerLanguage('ps1', powershell);
+hljs.registerLanguage('dos', dos);
+hljs.registerLanguage('bat', dos);
+hljs.registerLanguage('cmd', dos);
+hljs.registerLanguage('csharp', csharp);
+hljs.registerLanguage('cs', csharp);
+hljs.registerLanguage('cpp', cpp);
+hljs.registerLanguage('c', cpp);
+hljs.registerLanguage('ini', ini);
+hljs.registerLanguage('toml', ini);
 
 export function highlightBlock(code: HTMLElement): void {
   const mode = code.dataset.hljs ?? '';

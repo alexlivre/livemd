@@ -43,6 +43,12 @@ describe('highlightBlock', () => {
     expect(code.innerHTML).toBe('hello');
   });
 
+  it('highlights powershell code blocks', () => {
+    const code = codeBlock('<pre><code class="hljs" data-hljs="powershell">Get-Process | Where-Object { $_.Name -eq "LiveMD" }</code></pre>');
+    highlightBlock(code);
+    expect(code.innerHTML).toContain('hljs-built_in');
+  });
+
   it('re-escapes code when highlighting', () => {
     const code = codeBlock('<pre><code class="hljs" data-hljs="javascript">a &lt; b</code></pre>');
     highlightBlock(code);
