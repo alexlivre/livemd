@@ -57,6 +57,7 @@ export function bindShortcuts(deps: ShortcutDeps): void {
       deps.toggleSidebar?.();
     } else if (isCtrl && key === 'p' && !evt.shiftKey) {
       // Pin/unpin active tab — override browser Print (ignored while typing)
+      evt.preventDefault();
       const target = evt.target as HTMLElement | null;
       const isEditable =
         !!target &&
@@ -64,7 +65,6 @@ export function bindShortcuts(deps: ShortcutDeps): void {
           target.tagName === 'TEXTAREA' ||
           target.isContentEditable);
       if (!isEditable) {
-        evt.preventDefault();
         deps.togglePin?.();
       }
     } else if (evt.key === 'Escape') {
