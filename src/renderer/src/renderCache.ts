@@ -6,8 +6,8 @@ interface CacheEntry {
   html: string;
 }
 
-export const ENTRY_CAP_BYTES = 768 * 1024;
-export const TOTAL_CAP_BYTES = 4.5 * 1024 * 1024;
+export const ENTRY_CAP_BYTES = 256 * 1024;
+export const TOTAL_CAP_BYTES = 1024 * 1024;
 const STORAGE_KEY = 'md-reader.render';
 
 interface PersistedEntry {
