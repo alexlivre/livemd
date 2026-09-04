@@ -3,7 +3,7 @@
 > A Markdown reader for Windows that **watches the files you have open** and re-renders them the instant you save. Tabs, syntax highlighting, drag & drop, recent files — all local, no telemetry (only images inside a document load from the web, with `no-referrer`).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Electron 32](https://img.shields.io/badge/Electron-32-blue)](https://www.electronjs.org)
+[![Electron 43](https://img.shields.io/badge/Electron-43-blue)](https://www.electronjs.org)
 [![TypeScript 5.6](https://img.shields.io/badge/TypeScript-5.6-blue)](https://www.typescriptlang.org/)
 [![Windows 10+](https://img.shields.io/badge/Windows-10%2B-0078D6)](https://www.microsoft.com/windows)
 [![Release](https://img.shields.io/github/v/release/alexlivre/livemd)](https://github.com/alexlivre/livemd/releases)
@@ -53,7 +53,8 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 
 - **Live file-reload** — save the file in your editor and the open tab updates automatically (chokidar + `awaitWriteFinish` avoids reloading during partial writes)
 - **Tabs** — open multiple files (multi-select dialog, drag & drop, or "Open with"); middle-click a tab to close it, right-click to reveal the file in Explorer
-- **Syntax highlighting** — 13 languages (JS/TS, Python, Rust, Go, Bash, JSON, SQL, YAML, …) via highlight.js, with a **copy button** on every code block
+- **Syntax highlighting** — 18+ languages (JS/TS, Python, PowerShell, Batch, C#, C/C++, Rust, Go, Bash, JSON, SQL, YAML, INI/TOML, …) via highlight.js, with a **copy button** on every code block
+- **Task lists** — GitHub-flavored Markdown checkboxes (`- [ ]`, `- [x]`) rendered with checkboxes and custom styling
 - **Drag & drop** — drop `.md` files from Explorer anywhere on the window; a "Solte para abrir" overlay shows while dragging, and each file becomes a new tab
 - **Recent files** — last 10 opened files in a titlebar dropdown, clearable, click to reopen
 - **"Open with" integration** — file associations for `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`; single-instance lock focuses the running window and opens the file in a new tab
@@ -68,11 +69,11 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 - **Sidebar** — file tree of the active file's folder (`Ctrl+B`), live refresh via `folder:list` + chokidar `folder:changed` watcher; click to open in a new tab
 - **Light theme** — third `light` theme (pure-white) alongside `dark`/`soft`; cycled `dark → soft → light` with `Ctrl+Shift+T`, all colors are CSS tokens in `:root[data-theme='...']`
 - **Custom CSS** — editor modal for `userData/custom.css` (`customCss:load`/`save` IPC) with live `insertCSS` injection and watcher hot-reload (`custom-css:changed`)
-- **Pinned tabs, reorder & per-file zoom** — pin/unpin (`Ctrl+P` or right-click, `📌` + `is-pinned`), drag to reorder, per-file zoom (`Ctrl+=`/`Ctrl+-`/`Ctrl+0`) persisted in `md-reader.zoom`
+- **Pinned tabs, reorder & per-file zoom** — pin/unpin (`Ctrl+P` or right-click, `📌` + `is-pinned`), drag to reorder tabs, per-file zoom (`Ctrl+=`/`Ctrl+-`/`Ctrl+0`) persisted in `md-reader.zoom`
 - **Highlights** — persistent marks per file (select 2–300 chars → context menu or `Ctrl+H`), saved to `userData/highlights.json` and re-applied after every render
 - **Command palette** — `Ctrl+K` fuzzy palette for all actions (fuzzy + substring filter, limit 20)
 - **Mermaid & Math** — progressive rendering via dynamic `import('mermaid')`/`import('katex')` with silent fallback when not installed
-- **Session restore** — open tabs and their scroll positions are restored on the next launch
+- **Session restore** — open tabs (including pinned status) and their scroll positions are restored on the next launch
 - **Zoom** — `Ctrl+=` / `Ctrl+-` / `Ctrl+0` adjust the zoom level **per file** (persisted in `md-reader.zoom`, restored on tab switch)
 - **Secure by default** — Markdown sanitized with DOMPurify, CSP `script-src 'self'`, renderer sandbox on, `contextIsolation` on, `file:read` gated behind a session allowlist; remote **images** render but never leak the reading context (`referrerpolicy="no-referrer"`) and remote **scripts** are impossible
 - **NSIS installer** — per-user install (no admin), custom page asking to set LiveMD as the default app for Markdown files
@@ -86,7 +87,7 @@ If you write Markdown, you probably jump between an editor and a preview — or 
 # 1. Download the installer from the Releases page
 #    https://github.com/alexlivre/livemd/releases
 
-# 2. Run LiveMD-Setup-1.0.0.exe — no admin required
+# 2. Run LiveMD-Setup-1.3.0.exe — no admin required
 
 # 3. Open any .md (double-click, drag & drop, or Ctrl+O)
 ```
@@ -109,7 +110,7 @@ npm run dev     # electron-vite dev with hot-reload
 
 ### Option A — Windows installer (recommended for end users)
 
-Download `LiveMD-Setup-1.0.0.exe` from the [Releases page](https://github.com/alexlivre/livemd/releases) and run it. The installer is **per-user** (`perMachine: false`), so **no administrator rights are needed** — registry entries go to `HKCU`, not `HKLM`. A custom NSIS page asks whether to make LiveMD the default app for Markdown files.
+Download `LiveMD-Setup-1.3.0.exe` from the [Releases page](https://github.com/alexlivre/livemd/releases) and run it. The installer is **per-user** (`perMachine: false`), so **no administrator rights are needed** — registry entries go to `HKCU`, not `HKLM`. A custom NSIS page asks whether to make LiveMD the default app for Markdown files.
 
 A portable build (no installer) is also produced: `release/win-unpacked/LiveMD.exe` after `npm run pack`.
 
@@ -253,7 +254,7 @@ src/
 │   └── src/
 │       ├── main.ts       # wiring: tabs ↔ render ↔ IPC ↔ menus ↔ shortcuts ↔ sidebar/customCss
 │       ├── tabs.ts       # TabManager (tabs, active, pin/reorder, close/activate/update)
-│       ├── markdown.ts   # marked + DOMPurify + highlight.js (13 languages)
+│       ├── markdown.ts   # marked + DOMPurify + highlight.js (18+ languages)
 │       ├── theme.ts      # dark/soft/light themes (cycle 3), persistence
 │       ├── sidebar.ts    # file-tree sidebar (folder:list, toggle Ctrl+B)
 │       ├── customCss.ts  # Custom CSS load/save/apply (userData/custom.css)
@@ -288,10 +289,12 @@ scripts/
 | `file:open-dialog` | renderer → main | Native multi-select open dialog |
 | `file:read` | renderer → main | Read a path and start watching it (path must be pre-authorized) |
 | `file:allow-read` | renderer → main | Authorize a path for `file:read` |
+| `file:save-as` | renderer → main | Save copy of document / frozen tab with path authorization |
 | `tab:close` | renderer → main | Stop watching a closed tab's file |
 | `shell:reveal` | renderer → main | Show a file in Windows Explorer |
 | `app:consume-pending` | renderer → main | Fetch the "Open with" path from a cold start |
 | `app:get-locale` / `app:set-language` | renderer → main | Get/set the effective UI language |
+| `app:set-theme` | renderer → main | Persist active theme in settings.json to match window background |
 | `app:get-version` | renderer → main | Read the app version |
 | `app:open-external` | renderer → main | Open a whitelisted URL (`http`/`https`/`mailto`) |
 | `app:check-update` | renderer → main | Check GitHub releases for a newer version |
@@ -333,7 +336,7 @@ npm install
 | `npm run build` | Production build to `out/` |
 | `npm run build:icon` | Regenerate `build/icon.png` + `build/icon.ico` from `build/icon.svg` |
 | `npm run pack` | Build + icon + `electron-builder --dir` → `release/win-unpacked/LiveMD.exe` |
-| `npm run dist:win` | Build + icon + NSIS installer → `release/LiveMD-Setup-1.0.0.exe` |
+| `npm run dist:win` | Build + icon + NSIS installer → `release/LiveMD-Setup-1.3.0.exe` |
 
 ### Project conventions
 
@@ -402,7 +405,7 @@ Contributions are welcome! TL;DR:
 
 ## Built with
 
-- **[Electron 32](https://www.electronjs.org)** + **[electron-vite 2](https://electron-vite.org)** — desktop shell and build tooling
+- **[Electron 43](https://www.electronjs.org)** + **[electron-vite 2](https://electron-vite.org)** — desktop shell and build tooling
 - **[TypeScript 5.6](https://www.typescriptlang.org)** — strict, end-to-end
 - **[marked](https://marked.js.org)** — GitHub-flavored Markdown parsing
 - **[DOMPurify](https://github.com/cure53/DOMPurify)** — sanitization
