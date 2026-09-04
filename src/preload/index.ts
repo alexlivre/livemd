@@ -19,6 +19,8 @@ const api: MdApi = {
   getOsLocale: () => ipcRenderer.invoke('app:get-locale') as Promise<string>,
   setLanguage: (lang: AppLanguage) =>
     ipcRenderer.invoke('app:set-language', lang) as Promise<void>,
+  setTheme: (theme: string) =>
+    ipcRenderer.invoke('app:set-theme', theme) as Promise<void>,
   getAppVersion: () => ipcRenderer.invoke('app:get-version') as Promise<string>,
   openExternal: (url: string) =>
     ipcRenderer.invoke('app:open-external', url) as Promise<void>,

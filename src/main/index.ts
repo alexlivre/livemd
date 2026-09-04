@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import type { FSWatcher } from 'chokidar';
 import { mapOsLocale, t, type AppLanguage } from '@shared/i18n';
-import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES } from '@shared/constants';
+import { MARKDOWN_EXT_RE, MARKDOWN_EXTENSIONS, MAX_FILE_BYTES, THEME_BG_COLORS, DEFAULT_THEME, type ThemeName } from '@shared/constants';
 import { suggestBackupPath } from '@shared/backupName';
 import { versionsNewer } from '@shared/version';
 import { enablePerf, perfMark } from '@shared/perf';
@@ -122,6 +122,7 @@ async function writeCustomThemesStore(themes: CustomTheme[]): Promise<void> {
 
 interface Settings {
   language?: AppLanguage;
+  theme?: ThemeName;
 }
 
 function readSettings(): Settings {
@@ -451,6 +452,7 @@ function registerIpc(win: BrowserWindow): void {
     if (result.canceled || !result.filePath) return null;
 
     await fs.writeFile(result.filePath, content, 'utf-8');
+    trustPath(result.filePath);
     return { savedPath: result.filePath };
   });
 
@@ -548,6 +550,12 @@ function registerIpc(win: BrowserWindow): void {
     if (lang === 'pt' || lang === 'en' || lang === 'es') {
       currentLang = lang;
       writeSettings({ language: lang });
+    }
+  });
+
+  ipcMain.handle('app:set-theme', (_evt, theme: unknown) => {
+    if (theme === 'dark' || theme === 'soft' || theme === 'light') {
+      writeSettings({ theme });
     }
   });
 
@@ -714,12 +722,15 @@ function registerIpc(win: BrowserWindow): void {
 
 async function createWindow(): Promise<void> {
   perfMark('main:create-window');
+  const storedTheme = readSettings().theme;
+  const initialTheme: ThemeName =
+    storedTheme && storedTheme in THEME_BG_COLORS ? storedTheme : DEFAULT_THEME;
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 600,
     minHeight: 400,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: THEME_BG_COLORS[initialTheme],
     title: 'LiveMD',
     autoHideMenuBar: true,
     show: false,
@@ -841,8 +852,12 @@ async function createWindow(): Promise<void> {
 
   mainWindow.webContents.on('did-finish-load', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    // Renderer reload rebuilds its TabManager: restart per-path counting so
-    // counts match the fresh session's tabs.
+    // Renderer reload rebuilds its TabManager: close previous watchers and
+    // restart per-path counting so counts match the fresh session's tabs.
+    for (const watcher of watched.values()) {
+      void watcher.close();
+    }
+    watched.clear();
     watchCounts.clear();
     const queued = pendingOpenPaths.splice(0);
     for (const filePath of queued) {

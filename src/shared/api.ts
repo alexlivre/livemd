@@ -47,6 +47,7 @@ export interface MdApi {
   consumePendingPaths: () => Promise<string[]>;
   getOsLocale: () => Promise<string>;
   setLanguage: (lang: AppLanguage) => Promise<void>;
+  setTheme: (theme: string) => Promise<void>;
   getAppVersion: () => Promise<string>;
   openExternal: (url: string) => Promise<void>;
   checkUpdate: () => Promise<UpdateCheck | null>;

@@ -40,6 +40,12 @@ export function applyTheme(theme: ThemeName): void {
 export function setTheme(theme: ThemeName): void {
   writeStoredTheme(theme);
   applyTheme(theme);
+  try {
+    const api = (window as unknown as { mdApi?: { setTheme?: (t: string) => Promise<void> } }).mdApi;
+    if (api?.setTheme) void api.setTheme(theme).catch(() => {});
+  } catch {
+    /* ignore in tests/standalone */
+  }
 }
 
 export function toggleTheme(): ThemeName {
