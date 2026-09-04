@@ -1,5 +1,5 @@
 export interface SessionSnapshot {
-  tabs: Array<{ filePath: string; scrollTop: number }>;
+  tabs: Array<{ filePath: string; scrollTop: number; pinned?: boolean }>;
   activePath: string | null;
 }
 
@@ -24,12 +24,16 @@ export function loadSession(): SessionSnapshot | null {
     return {
       tabs: p.tabs
         .filter(
-          (t): t is { filePath: string; scrollTop: number } =>
+          (t): t is { filePath: string; scrollTop: number; pinned?: boolean } =>
             typeof t === 'object' &&
             t !== null &&
             typeof (t as { filePath?: unknown }).filePath === 'string'
         )
-        .map((t) => ({ filePath: t.filePath, scrollTop: typeof t.scrollTop === 'number' ? t.scrollTop : 0 })),
+        .map((t) => ({
+          filePath: t.filePath,
+          scrollTop: typeof t.scrollTop === 'number' ? t.scrollTop : 0,
+          ...(t.pinned ? { pinned: true } : {})
+        })),
       activePath: typeof p.activePath === 'string' ? p.activePath : null
     };
   } catch {

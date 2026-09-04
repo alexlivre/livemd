@@ -343,11 +343,19 @@ function renderTabbar(state: { tabs: TabData[]; activeId: string | null }): void
     const closeBtn = document.createElement('span');
     closeBtn.className = 'tab-close';
     closeBtn.setAttribute('role', 'button');
+    closeBtn.setAttribute('tabindex', '0');
     closeBtn.setAttribute('aria-label', t('closeTabAria', { name: tab.fileName }));
     closeBtn.textContent = '×';
     closeBtn.addEventListener('click', (evt) => {
       evt.stopPropagation();
       void onCloseTab(tab.id);
+    });
+    closeBtn.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Enter' || evt.key === ' ') {
+        evt.preventDefault();
+        evt.stopPropagation();
+        void onCloseTab(tab.id);
+      }
     });
     el.appendChild(closeBtn);
 
@@ -853,7 +861,8 @@ function snapshotSession(): void {
   const state = manager.getState();
   const tabs = state.tabs.map((tab) => ({
     filePath: tab.filePath,
-    scrollTop: scrollByPath.get(tab.filePath) ?? 0
+    scrollTop: scrollByPath.get(tab.filePath) ?? 0,
+    ...(tab.pinned ? { pinned: true } : {})
   }));
   const active = state.activeId ? state.tabs.find((t) => t.id === state.activeId) : null;
   saveSession({ tabs, activePath: active ? active.filePath : null });
@@ -882,6 +891,13 @@ async function restoreSession(): Promise<void> {
   if (files.length === 0) return;
 
   manager.addMany(files, pendingClickConsumed ? null : (session.activePath ?? undefined));
+
+  for (const tab of session.tabs) {
+    if (tab.pinned) {
+      const live = manager.getState().tabs.find((t) => t.filePath === tab.filePath);
+      if (live) manager.pin(live.id);
+    }
+  }
 
   for (const file of files) {
     void api.watchFile(file.filePath).catch(() => {});
@@ -1398,12 +1414,12 @@ async function handleThemeEditorSave(): Promise<void> {
     themeEditorError.textContent = '';
   }
   if (!name) {
-    showThemeEditorError('name required');
+    showThemeEditorError(t('themeNameRequired'));
     themeEditorName.focus();
     return;
   }
   if (css.length > 50 * 1024) {
-    showThemeEditorError('css too large');
+    showThemeEditorError(t('themeCssTooLarge'));
     themeEditorCss.focus();
     return;
   }
@@ -1424,10 +1440,10 @@ async function handleThemeEditorSave(): Promise<void> {
 
 function showThemeEditorError(message: string): void {
   if (themeEditorError) {
-    themeEditorError.textContent = t('saveError', { msg: message });
+    themeEditorError.textContent = message;
     themeEditorError.hidden = false;
   } else {
-    toast.show({ message: t('saveError', { msg: message }), persist: true });
+    toast.show({ message, persist: true });
   }
 }
 
@@ -1442,7 +1458,21 @@ function bindThemeEditor(): void {
   themeEditorCard?.addEventListener('click', (evt) => evt.stopPropagation());
   themeEditorModal.addEventListener('keydown', (evt) => {
     if (evt.key === 'Escape') { closeThemeEditor(); return; }
-    if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) { void handleThemeEditorSave(); }
+    if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) { void handleThemeEditorSave(); return; }
+    if (evt.key !== 'Tab') return;
+    const focusable = themeEditorModal.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (evt.shiftKey && document.activeElement === first) {
+      evt.preventDefault();
+      last.focus();
+    } else if (!evt.shiftKey && document.activeElement === last) {
+      evt.preventDefault();
+      first.focus();
+    }
   });
 }
 

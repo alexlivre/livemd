@@ -6,8 +6,8 @@ describe('session', () => {
   beforeEach(() => localStorage.clear());
 
   it('round-trips a snapshot', () => {
-    saveSession({ tabs: [{ filePath: '/a.md', scrollTop: 42 }], activePath: '/a.md' });
-    expect(loadSession()).toEqual({ tabs: [{ filePath: '/a.md', scrollTop: 42 }], activePath: '/a.md' });
+    saveSession({ tabs: [{ filePath: '/a.md', scrollTop: 42, pinned: true }], activePath: '/a.md' });
+    expect(loadSession()).toEqual({ tabs: [{ filePath: '/a.md', scrollTop: 42, pinned: true }], activePath: '/a.md' });
   });
 
   it('returns null when empty', () => {
