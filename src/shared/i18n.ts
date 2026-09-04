@@ -127,7 +127,14 @@ const enMessages = {
   themeDeleteConfirm: 'Delete theme "{name}"?',
   themeOfficialProtected: 'Official themes cannot be deleted or modified',
   themeEmptyCustom: 'No custom themes',
-  themeApply: 'Apply'
+  themeApply: 'Apply',
+  sidebarNoFolder: 'No folder',
+  sidebarEmptyFolder: 'Empty folder',
+  sidebarFailedLoad: 'Failed to load',
+  sidebarTooltip: 'Toggle sidebar (Ctrl+B)',
+  themeCancel: 'Cancel',
+  themeNameRequired: 'Theme name is required',
+  themeCssTooLarge: 'CSS code is too large'
 } as const satisfies Record<string, string>;
 
 export type MsgKey = keyof typeof enMessages;
@@ -257,7 +264,14 @@ const ptMessages: Record<MsgKey, string> = {
   themeDeleteConfirm: 'Excluir tema "{name}"?',
   themeOfficialProtected: 'Temas oficiais não podem ser excluídos ou modificados',
   themeEmptyCustom: 'Nenhum tema personalizado',
-  themeApply: 'Aplicar'
+  themeApply: 'Aplicar',
+  sidebarNoFolder: 'Nenhuma pasta',
+  sidebarEmptyFolder: 'Pasta vazia',
+  sidebarFailedLoad: 'Falha ao carregar',
+  sidebarTooltip: 'Alternar barra lateral (Ctrl+B)',
+  themeCancel: 'Cancelar',
+  themeNameRequired: 'Nome do tema é obrigatório',
+  themeCssTooLarge: 'Código CSS muito grande'
 };
 
 const esMessages: Record<MsgKey, string> = {
@@ -385,7 +399,14 @@ const esMessages: Record<MsgKey, string> = {
   themeDeleteConfirm: '¿Eliminar tema "{name}"?',
   themeOfficialProtected: 'Los temas oficiales no se pueden eliminar ni modificar',
   themeEmptyCustom: 'Ningún tema personalizado',
-  themeApply: 'Aplicar'
+  themeApply: 'Aplicar',
+  sidebarNoFolder: 'Sin carpeta',
+  sidebarEmptyFolder: 'Carpeta vacía',
+  sidebarFailedLoad: 'Error al cargar',
+  sidebarTooltip: 'Alternar barra lateral (Ctrl+B)',
+  themeCancel: 'Cancelar',
+  themeNameRequired: 'El nombre del tema es obligatorio',
+  themeCssTooLarge: 'El código CSS es demasiado grande'
 };
 
 export const MESSAGES: Record<AppLanguage, Record<MsgKey, string>> = {

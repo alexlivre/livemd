@@ -1,4 +1,5 @@
-import { basename } from './util';
+import { basename, escapeHtml } from './util';
+import { t } from './i18n';
 
 const STORAGE_KEY = 'md-reader.sidebar';
 
@@ -107,7 +108,7 @@ export async function refreshSidebar(
   ensureFolderWatcher();
 
   if (!folderPath) {
-    listEl.innerHTML = '<div class="recent-empty">No folder</div>';
+    listEl.innerHTML = `<div class="recent-empty">${escapeHtml(t('sidebarNoFolder'))}</div>`;
     return;
   }
 
@@ -120,7 +121,7 @@ export async function refreshSidebar(
     files.sort((a, b) => getBasename(a).localeCompare(getBasename(b)));
 
     if (files.length === 0) {
-      listEl.innerHTML = '<div class="recent-empty">Empty folder</div>';
+      listEl.innerHTML = `<div class="recent-empty">${escapeHtml(t('sidebarEmptyFolder'))}</div>`;
       return;
     }
 
@@ -144,7 +145,7 @@ export async function refreshSidebar(
     }
   } catch {
     if (currentFolder !== folderPath) return;
-    listEl.innerHTML = '<div class="recent-empty">Failed to load</div>';
+    listEl.innerHTML = `<div class="recent-empty">${escapeHtml(t('sidebarFailedLoad'))}</div>`;
   }
 }
 

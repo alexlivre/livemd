@@ -84,6 +84,7 @@ FunctionEnd
   WriteRegStr HKCU "Software\Classes\.markdown\OpenWithProgids" "LiveMD.mdfile" ""
   WriteRegStr HKCU "Software\Classes\.mdown\OpenWithProgids" "LiveMD.mdfile" ""
   WriteRegStr HKCU "Software\Classes\.mkd\OpenWithProgids" "LiveMD.mdfile" ""
+  WriteRegStr HKCU "Software\Classes\.mdx\OpenWithProgids" "LiveMD.mdfile" ""
 !macroend
 
 ; Claim the class-level default only when the user opted in and there is no
@@ -94,6 +95,7 @@ FunctionEnd
     WriteRegStr HKCU "Software\Classes\.markdown" "" "LiveMD.mdfile"
     WriteRegStr HKCU "Software\Classes\.mdown" "" "LiveMD.mdfile"
     WriteRegStr HKCU "Software\Classes\.mkd" "" "LiveMD.mdfile"
+    WriteRegStr HKCU "Software\Classes\.mdx" "" "LiveMD.mdfile"
 
     ; Notify shell of change
     System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
@@ -112,11 +114,13 @@ FunctionEnd
   DeleteRegValue HKCU "Software\Classes\.markdown\OpenWithProgids" "LiveMD.mdfile"
   DeleteRegValue HKCU "Software\Classes\.mdown\OpenWithProgids" "LiveMD.mdfile"
   DeleteRegValue HKCU "Software\Classes\.mkd\OpenWithProgids" "LiveMD.mdfile"
+  DeleteRegValue HKCU "Software\Classes\.mdx\OpenWithProgids" "LiveMD.mdfile"
   DeleteRegKey HKCU "Software\Classes\Applications\${APP_EXECUTABLE_FILENAME}"
   DeleteRegKey HKCU "Software\Classes\LiveMD.mdfile"
   DeleteRegKey HKCU "Software\Classes\.md"
   DeleteRegKey HKCU "Software\Classes\.markdown"
   DeleteRegKey HKCU "Software\Classes\.mdown"
   DeleteRegKey HKCU "Software\Classes\.mkd"
+  DeleteRegKey HKCU "Software\Classes\.mdx"
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
 !macroend
