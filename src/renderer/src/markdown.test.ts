@@ -101,3 +101,15 @@ describe('renderMarkdown remote images', () => {
     }
   });
 });
+
+describe('renderMarkdown task lists', () => {
+  it('preserves checkbox input elements for GFM task lists', async () => {
+    const html = await renderMarkdown('- [ ] Incomplete task\n- [x] Completed task');
+    expect(html).toContain('type="checkbox"');
+    expect(html).toContain('disabled');
+    expect(html).toContain('checked');
+    expect(html).toContain('Incomplete task');
+    expect(html).toContain('Completed task');
+  });
+});
+

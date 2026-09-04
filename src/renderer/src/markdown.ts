@@ -106,7 +106,8 @@ marked.use({
 function sanitize(html: string): string {
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
-    ADD_ATTR: ['target', 'rel', 'data-hljs']
+    ADD_TAGS: ['input'],
+    ADD_ATTR: ['target', 'rel', 'data-hljs', 'type', 'checked', 'disabled']
   });
 }
 
