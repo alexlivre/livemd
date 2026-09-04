@@ -4,6 +4,9 @@
  * If mermaid/katex are not installed, they leave the DOM intact and never throw.
  */
 
+let mermaidPromise: Promise<any | null> | null = null;
+let katexPromise: Promise<any | null> | null = null;
+
 async function tryDynamicImport(spec: string): Promise<any | null> {
   try {
     const loader = new Function('s', 'return import(s)') as (s: string) => Promise<any>;
@@ -15,18 +18,19 @@ async function tryDynamicImport(spec: string): Promise<any | null> {
 }
 
 export async function renderMermaid(container: HTMLElement): Promise<void> {
-  const blocks = container.querySelectorAll('pre code.language-mermaid');
-  if (blocks.length === 0) return;
-
   let mermaid: any = null;
   try {
-    const mod = await tryDynamicImport('mermaid');
+    mermaidPromise ??= tryDynamicImport('mermaid');
+    const mod = await mermaidPromise;
     if (!mod) return;
     mermaid = (mod as any).default ?? mod;
   } catch {
     return;
   }
   if (!mermaid) return;
+
+  const blocks = container.querySelectorAll('pre code.language-mermaid');
+  if (blocks.length === 0) return;
 
   try {
     const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
@@ -75,17 +79,18 @@ export async function renderMermaid(container: HTMLElement): Promise<void> {
 }
 
 export async function renderMath(container: HTMLElement): Promise<void> {
-  if (!container.textContent?.includes('$')) return;
-
   let katex: any = null;
   try {
-    const mod = await tryDynamicImport('katex');
+    katexPromise ??= tryDynamicImport('katex');
+    const mod = await katexPromise;
     if (!mod) return;
     katex = (mod as any).default ?? mod;
   } catch {
     return;
   }
   if (!katex || typeof katex.renderToString !== 'function') return;
+
+  if (!container.textContent?.includes('$')) return;
 
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
     acceptNode(node: Node) {

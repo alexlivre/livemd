@@ -30,14 +30,21 @@ function cssEscape(value: string): string {
 }
 
 export function refreshOutline(_tabId: string, contentEl: HTMLElement, trigger: HTMLButtonElement, menu: HTMLElement): void {
+  activeObserver?.disconnect();
+  activeObserver = null;
   const items = buildOutline(contentEl);
   trigger.hidden = items.length < 2;
-  if (trigger.hidden) { menu.hidden = true; return; }
-  renderOutlineMenu(menu, items, contentEl);
+  if (trigger.hidden) {
+    menu.hidden = true;
+    trigger.classList.remove('is-active');
+    trigger.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  renderOutlineMenu(menu, items, contentEl, trigger);
   setupSpy(contentEl, menu);
 }
 
-function renderOutlineMenu(menu: HTMLElement, items: OutlineItem[], contentEl: HTMLElement): void {
+function renderOutlineMenu(menu: HTMLElement, items: OutlineItem[], contentEl: HTMLElement, trigger?: HTMLButtonElement): void {
   if (items.length === 0) { menu.innerHTML = `<div class="recent-empty">${escapeHtml(t('outlineEmpty'))}</div>`; return; }
   menu.innerHTML = `<div class="lang-menu-title">${escapeHtml(t('outlineTitle'))}</div><ul class="recent-menu-list">${items.map(it=>`<li><button class="lang-menu-item outline-item" data-id="${escapeAttr(it.id)}" style="padding-left:${8+it.level*8}px"><span class="recent-menu-name">${escapeHtml(it.text)}</span></button></li>`).join('')}</ul>`;
   for (const btn of menu.querySelectorAll<HTMLButtonElement>('.outline-item')) {
@@ -47,6 +54,10 @@ function renderOutlineMenu(menu: HTMLElement, items: OutlineItem[], contentEl: H
       const target = contentEl.querySelector(`#${escId}`) ?? contentEl.querySelector(`[data-slug="${escapeAttr(id)}"]`);
       if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
       menu.hidden = true;
+      if (trigger) {
+        trigger.classList.remove('is-active');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
     });
   }
 }
