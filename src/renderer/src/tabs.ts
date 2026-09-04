@@ -228,8 +228,7 @@ export class TabManager {
     const toIdx = this.tabs.findIndex((t) => t.id === toId);
     if (fromIdx === -1 || toIdx === -1) return;
     const [moved] = this.tabs.splice(fromIdx, 1);
-    const insertAt = fromIdx < toIdx ? toIdx - 1 : toIdx;
-    this.tabs.splice(insertAt, 0, moved);
+    this.tabs.splice(toIdx, 0, moved);
     this.emit();
   }
 }

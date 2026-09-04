@@ -153,3 +153,36 @@ describe('TabManager orphaned state', () => {
     );
   });
 });
+
+describe('TabManager reorder', () => {
+  it('moves a tab forward (to the right)', () => {
+    const m = new TabManager();
+    const a = m.add(file('/a.md'));
+    const b = m.add(file('/b.md'));
+    const c = m.add(file('/c.md'));
+    m.reorder(a.id, b.id);
+    const order = m.getState().tabs.map((t) => t.id);
+    expect(order).toEqual([b.id, a.id, c.id]);
+  });
+
+  it('moves a tab backward (to the left)', () => {
+    const m = new TabManager();
+    const a = m.add(file('/a.md'));
+    const b = m.add(file('/b.md'));
+    const c = m.add(file('/c.md'));
+    m.reorder(c.id, a.id);
+    const order = m.getState().tabs.map((t) => t.id);
+    expect(order).toEqual([c.id, a.id, b.id]);
+  });
+
+  it('no-ops when fromId === toId or id is invalid', () => {
+    const m = new TabManager();
+    const a = m.add(file('/a.md'));
+    const b = m.add(file('/b.md'));
+    m.reorder(a.id, a.id);
+    expect(m.getState().tabs.map((t) => t.id)).toEqual([a.id, b.id]);
+    m.reorder(a.id, 'non-existent');
+    expect(m.getState().tabs.map((t) => t.id)).toEqual([a.id, b.id]);
+  });
+});
+
